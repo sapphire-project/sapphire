@@ -72,6 +72,10 @@ pub enum TokenKind {
     Interface,
     Question,
 
+    Match,
+    FatArrow,   // =>
+    Underscore, // _
+
     Newline,
     Eof,
 }
