@@ -1,5 +1,8 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_method, format_value_with_heap, HeapObject, VmError, VmValue};
+use crate::vm::{
+    define_native_class_method, define_native_method, format_value_with_heap, HeapObject, NativeArity,
+    VmError, VmValue,
+};
 
 fn set_r(recv: &VmValue) -> GcRef {
     match recv {
@@ -214,6 +217,35 @@ pub fn set_union(
             line,
         }),
     }
+}
+
+fn set_class_new(
+    heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [] => Ok(VmValue::Set(heap.alloc(HeapObject::Set(vec![])))),
+        [VmValue::List(list_ref)] => {
+            let items = heap.get_list(*list_ref).clone();
+            let elements = dedup_list(items);
+            Ok(VmValue::Set(heap.alloc(HeapObject::Set(elements))))
+        }
+        [VmValue::Set(set_ref)] => {
+            let items = heap.get_set(*set_ref).clone();
+            Ok(VmValue::Set(heap.alloc(HeapObject::Set(items))))
+        }
+        _ => Err(VmError::TypeError {
+            message: "Set.new: expected no arguments, a List, or a Set".into(),
+            line,
+        }),
+    }
+}
+
+/// Register native Set class methods on the bootstrapped Set `ClassObject`.
+pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
+    define_native_class_method(heap, class_ref, "new", NativeArity { min: 0, max: 1 }, set_class_new);
 }
 
 /// Register native Set instance methods on the bootstrapped Set `ClassObject`.
