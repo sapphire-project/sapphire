@@ -752,16 +752,12 @@ impl Vm {
                 }
                 // Walk the superclass chain via the class registry.
                 let mut current: &str = cn.as_str();
-                loop {
-                    if let Some(entry) = self.classes.get(current) {
-                        if let Some(parent) = &entry.superclass {
-                            if parent == class_name {
-                                return true;
-                            }
-                            current = parent.as_str();
-                        } else {
-                            break;
+                while let Some(entry) = self.classes.get(current) {
+                    if let Some(parent) = &entry.superclass {
+                        if parent == class_name {
+                            return true;
                         }
+                        current = parent.as_str();
                     } else {
                         break;
                     }

@@ -1708,11 +1708,9 @@ impl Parser {
                         self.advance();
                         n
                     }
-                    // Allow keywords as method/field names after '.' (e.g. self.class)
-                    TokenKind::Class => {
-                        self.advance();
-                        "class".to_string()
-                    }
+                    // Allow keywords as method/field names after '.' (e.g. self.class, r.match(...))
+                    TokenKind::Class => { self.advance(); "class".to_string() }
+                    TokenKind::Match => { self.advance(); "match".to_string() }
                     _ => {
                         return Err(SapphireError::ParseError {
                             message: "expected field or method name after '.'".into(),
@@ -1767,6 +1765,7 @@ impl Parser {
                         self.advance();
                         n
                     }
+                    TokenKind::Match => { self.advance(); "match".to_string() }
                     _ => {
                         return Err(SapphireError::ParseError {
                             message: "expected method or field name after '&.'".into(),
