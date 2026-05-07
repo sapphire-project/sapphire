@@ -546,6 +546,7 @@ pub struct CoreClasses {
     pub map_cls: Option<GcRef>,
     pub env_cls: Option<GcRef>,
     pub file_cls: Option<GcRef>,
+    pub math_cls: Option<GcRef>,
 }
 
 /// Per-class metadata stored by DefClass.
@@ -1159,6 +1160,7 @@ impl Vm {
             self.core_classes.map_cls,
             self.core_classes.env_cls,
             self.core_classes.file_cls,
+            self.core_classes.math_cls,
         ]
         .into_iter()
         .flatten()
@@ -1263,11 +1265,18 @@ impl Vm {
             methods: HashMap::new(),
             class_methods: HashMap::new(),
         });
+        let math_cls = self.heap.alloc(HeapObject::ClassObject {
+            name: "Math".into(),
+            superclass: Some(object),
+            class_ref: None,
+            methods: HashMap::new(),
+            class_methods: HashMap::new(),
+        });
 
         // Two-phase fixup: set class_ref now that class_cls is known.
         for r in [
             object, class_cls, set_cls, nil_cls, int_cls, float_cls, string_cls, range_cls,
-            list_cls, map_cls, env_cls, file_cls,
+            list_cls, map_cls, env_cls, file_cls, math_cls,
         ] {
             if let HeapObject::ClassObject { class_ref, .. } = self.heap.get_mut(r) {
                 *class_ref = Some(class_cls);
@@ -1287,8 +1296,10 @@ impl Vm {
             map_cls: Some(map_cls),
             env_cls: Some(env_cls),
             file_cls: Some(file_cls),
+            math_cls: Some(math_cls),
         };
         crate::native_set::register_methods(&mut self.heap, set_cls);
+        crate::native_set::register_class_methods(&mut self.heap, set_cls);
         crate::native_env::register_class_methods(&mut self.heap, env_cls);
         crate::native_file::register_class_methods(&mut self.heap, file_cls);
         crate::native_nil::register_methods(&mut self.heap, nil_cls);
@@ -1298,6 +1309,7 @@ impl Vm {
         crate::native_range::register_methods(&mut self.heap, range_cls);
         crate::native_list::register_methods(&mut self.heap, list_cls);
         crate::native_map::register_methods(&mut self.heap, map_cls);
+        crate::native_math::register_class_methods(&mut self.heap, math_cls);
     }
 
     /// Bootstrapped `ClassObject` for this primitive receiver, if any.
@@ -1377,6 +1389,7 @@ impl Vm {
             "Map" => self.core_classes.map_cls,
             "Env" => self.core_classes.env_cls,
             "File" => self.core_classes.file_cls,
+            "Math" => self.core_classes.math_cls,
             _ => None,
         }
     }
@@ -2589,15 +2602,6 @@ impl Vm {
                             // Namespace lookup: constants and nested classes (e.g. Math.PI, Outer.Inner).
                             self.stack.truncate(recv_slot);
                             self.stack.push(val.clone());
-                        } else if name == "Math" {
-                            let args: Vec<VmValue> = self.stack[recv_slot + 1..].to_vec();
-                            let result = crate::native_math::dispatch_math_class_method(
-                                &method_name,
-                                &args,
-                                line,
-                            )?;
-                            self.stack.truncate(recv_slot);
-                            self.stack.push(result);
                         } else if name == "Process" {
                             let proc_args: Vec<VmValue> = self.stack[recv_slot + 1..].to_vec();
                             let proc_result =
@@ -2648,38 +2652,6 @@ impl Vm {
                                         fields: gc_fields,
                                         methods,
                                     }
-                                }
-                            };
-                            self.stack.truncate(recv_slot);
-                            self.stack.push(result);
-                        } else if name == "Set" {
-                            let set_args: Vec<VmValue> = self.stack[recv_slot + 1..].to_vec();
-                            let result = match (method_name.as_str(), set_args.as_slice()) {
-                                ("new", []) => self.alloc_set(Vec::new()),
-                                ("new", [VmValue::List(list_ref)]) => {
-                                    let list_ref = *list_ref;
-                                    let items: Vec<VmValue> = self.heap.get_list(list_ref).clone();
-                                    let mut elements: Vec<VmValue> = Vec::new();
-                                    for item in items {
-                                        if !elements.contains(&item) {
-                                            elements.push(item);
-                                        }
-                                    }
-                                    self.alloc_set(elements)
-                                }
-                                ("new", [VmValue::Set(set_ref)]) => {
-                                    let set_ref = *set_ref;
-                                    let items: Vec<VmValue> = self.heap.get_set(set_ref).clone();
-                                    self.alloc_set(items)
-                                }
-                                _ => {
-                                    return Err(VmError::TypeError {
-                                        message: format!(
-                                            "Set.{} is not defined or wrong argument types",
-                                            method_name
-                                        ),
-                                        line,
-                                    });
                                 }
                             };
                             self.stack.truncate(recv_slot);
