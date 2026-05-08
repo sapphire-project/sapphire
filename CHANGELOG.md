@@ -1,5 +1,78 @@
 # Changelog
 
+## v0.8.0
+
+**Language**
+
+- `match` expression — pattern match on literals, ranges, and multiple values per arm; use `_` as a wildcard and `if` guards for conditional arms:
+
+```ruby
+grade = match score {
+  90..100      => { "A" }
+  80..89       => { "B" }
+  "Sat", "Sun" => { "Weekend" }
+  n if n > 50  => { "Pass" }
+  _            => { "Fail" }
+}
+```
+
+- Structural interfaces — declare an interface with required method signatures; any class implementing those methods satisfies the interface, no explicit declaration needed:
+
+```ruby
+interface Drawable {
+  def draw -> String
+}
+
+class Badge {
+  def draw -> String { "drawing badge" }
+}
+
+def render(item: Drawable) -> String { item.draw() }
+render(Badge.new())
+```
+
+- Abstract classes — mark a class `abstract` to prevent direct instantiation; use `abstract def` to require subclasses to implement a method:
+
+```ruby
+abstract class Shape {
+  abstract def area -> Float
+}
+
+class Square < Shape {
+  def area -> Float { 4.0 }
+}
+```
+
+- Modules and mixins — define reusable method groups with `module` and mix them into classes with `include`:
+
+```ruby
+module Greetable {
+  def greet -> String { "hello from " + self.name() }
+}
+
+class Person {
+  include(Greetable)
+  def name -> String { "Alice" }
+}
+
+Person.new().greet()  # "hello from Alice"
+```
+
+- `super` now works Ruby-style — bare `super` forwards all arguments; `super(args)` passes explicit arguments; `super.method` is no longer valid
+
+**Error messages**
+
+- Runtime errors now include source context and column position
+- No-method errors show the value's type: `30 (Int) has no method 'push'`
+- Typos in method names now show a did-you-mean suggestion
+- Parse errors at or past end of file now show source context
+
+**REPL**
+
+- `quit` and `exit` commands now work in `sapphire console`
+
+---
+
 ## v0.7.0
 
 **Language**
