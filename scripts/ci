@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Load cargo into PATH if not already present
+[ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
+
 run_check() {
   local name=$1
   local cmd=$2

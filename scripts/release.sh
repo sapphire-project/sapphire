@@ -8,7 +8,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 # Bump version in Cargo.toml
-sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+sed -i "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
 
 # Regenerate Cargo.lock
 cargo build
