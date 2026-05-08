@@ -87,6 +87,7 @@ struct FunctionState {
     /// Stack of active while-loop contexts, innermost last.
     loop_stack: Vec<LoopCtx>,
     return_type: Option<RuntimeType>,
+    param_types: Vec<Option<RuntimeType>>,
 }
 
 impl FunctionState {
@@ -102,6 +103,7 @@ impl FunctionState {
             super_method_name: None,
             loop_stack: Vec::new(),
             return_type: None,
+            param_types: Vec::new(),
         }
     }
 }
@@ -263,6 +265,7 @@ impl Compiler {
                 })
                 .collect(),
             return_type: state.return_type,
+            param_types: state.param_types,
         })
     }
 
@@ -943,6 +946,16 @@ impl Compiler {
                     let erased = erase_type_vars(&self.resolve_type_expr(te), &fn_tvars);
                     self.type_expr_runtime(Some(&erased))
                 });
+                self.state_mut().param_types = params
+                    .iter()
+                    .map(|p| {
+                        p.type_ann.as_ref().and_then(|te| {
+                            let erased =
+                                erase_type_vars(&self.resolve_type_expr(te), &fn_tvars);
+                            self.type_expr_runtime(Some(&erased))
+                        })
+                    })
+                    .collect();
                 // Slot 0 = the function itself — enables direct recursion by name.
                 self.state_mut().locals.push(LocalInfo {
                     name: name.clone(),
@@ -1721,6 +1734,17 @@ impl Compiler {
                 let erased = erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
                 self.type_expr_runtime(Some(&erased))
             });
+            self.state_mut().param_types = method
+                .params
+                .iter()
+                .map(|p| {
+                    p.type_ann.as_ref().and_then(|te| {
+                        let erased =
+                            erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
+                        self.type_expr_runtime(Some(&erased))
+                    })
+                })
+                .collect();
             self.state_mut().locals.push(LocalInfo {
                 name: "self".into(),
                 captured: false,
@@ -1754,6 +1778,17 @@ impl Compiler {
                 let erased = erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
                 self.type_expr_runtime(Some(&erased))
             });
+            self.state_mut().param_types = method
+                .params
+                .iter()
+                .map(|p| {
+                    p.type_ann.as_ref().and_then(|te| {
+                        let erased =
+                            erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
+                        self.type_expr_runtime(Some(&erased))
+                    })
+                })
+                .collect();
             self.state_mut().locals.push(LocalInfo {
                 name: "self".into(),
                 captured: false,

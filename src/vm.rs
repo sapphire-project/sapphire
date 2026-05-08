@@ -38,6 +38,26 @@ fn vm_value_matches_literal(value: &VmValue, literal: &Value) -> bool {
     }
 }
 
+fn check_param_types(function: &Function, args: &[VmValue], line: u32) -> Result<(), VmError> {
+    for (i, expected_type) in function.param_types.iter().enumerate() {
+        if let (Some(expected), Some(val)) = (expected_type, args.get(i))
+            && !runtime_type_matches(val, expected)
+        {
+            return Err(VmError::TypeError {
+                message: format!(
+                    "argument {} of '{}': expected {}, got {}",
+                    i + 1,
+                    function.name,
+                    runtime_type_display(expected),
+                    value_type_name(val)
+                ),
+                line,
+            });
+        }
+    }
+    Ok(())
+}
+
 fn runtime_type_matches(value: &VmValue, expected: &RuntimeType) -> bool {
     match expected {
         RuntimeType::Named(e) => {
@@ -2474,6 +2494,11 @@ impl Vm {
                                 line,
                             });
                         }
+                        check_param_types(
+                            &function,
+                            &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                            line,
+                        )?;
                         self.frames.push(CallFrame {
                             function,
                             upvalues,
@@ -2537,6 +2562,11 @@ impl Vm {
                                     line,
                                 });
                             }
+                            check_param_types(
+                                &method.function,
+                                &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                line,
+                            )?;
                             self.frames.push(CallFrame {
                                 function: method.function,
                                 upvalues: method.upvalues,
@@ -2618,6 +2648,11 @@ impl Vm {
                                             line,
                                         });
                                     }
+                                    check_param_types(
+                                        &m.function,
+                                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                        line,
+                                    )?;
                                     self.frames.push(CallFrame {
                                         function: m.function,
                                         upvalues: m.upvalues,
@@ -2836,6 +2871,11 @@ impl Vm {
                                             line,
                                         });
                                     }
+                                    check_param_types(
+                                        &m.function,
+                                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                        line,
+                                    )?;
                                     let class_name = Some(m.defined_in.clone());
                                     self.frames.push(CallFrame {
                                         function: m.function,
@@ -2883,6 +2923,11 @@ impl Vm {
                                         line,
                                     });
                                 }
+                                check_param_types(
+                                    &m.function,
+                                    &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                    line,
+                                )?;
                                 // recv and args are already on the stack at recv_slot..
                                 // so the new frame's slot 0 = recv, slots 1.. = args.
                                 let class_name = Some(m.defined_in.clone());
@@ -3026,6 +3071,11 @@ impl Vm {
                                 line,
                             });
                         }
+                        check_param_types(
+                            &method.function,
+                            &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                            line,
+                        )?;
                         let class_name = Some(method.defined_in.clone());
                         self.frames.push(CallFrame {
                             function: method.function,
@@ -3155,6 +3205,11 @@ impl Vm {
                             line,
                         });
                     }
+                    check_param_types(
+                        &method.function,
+                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                        line,
+                    )?;
                     let super_dispatch_class = method.defined_in.clone();
                     self.frames.push(CallFrame {
                         function: method.function,
@@ -3269,6 +3324,11 @@ impl Vm {
                             line,
                         });
                     }
+                    check_param_types(
+                        &function,
+                        &self.stack[fn_slot + 1..fn_slot + 1 + arg_count],
+                        line,
+                    )?;
                     self.frames.push(CallFrame {
                         function,
                         upvalues,
@@ -3376,6 +3436,11 @@ impl Vm {
                                     line,
                                 });
                             }
+                            check_param_types(
+                                &m.function,
+                                &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                line,
+                            )?;
                             let class_name = Some(m.defined_in.clone());
                             self.frames.push(CallFrame {
                                 function: m.function,
@@ -3397,6 +3462,11 @@ impl Vm {
                         match method {
                             Some(m) => {
                                 // Stack is still [..., recv, args...]; leave it for the frame.
+                                check_param_types(
+                                    &m.function,
+                                    &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                    line,
+                                )?;
                                 let class_name = Some(m.defined_in.clone());
                                 self.frames.push(CallFrame {
                                     function: m.function,
@@ -3460,6 +3530,11 @@ impl Vm {
                             line,
                         });
                     }
+                    check_param_types(
+                        &method.function,
+                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                        line,
+                    )?;
                     let class_name = Some(method.defined_in.clone());
                     self.frames.push(CallFrame {
                         function: method.function,
@@ -3717,6 +3792,11 @@ impl Vm {
                             line,
                         });
                     }
+                    check_param_types(
+                        &function,
+                        &self.stack[fn_slot + 1..fn_slot + 1 + arg_count],
+                        line,
+                    )?;
                     // Slot 0 of the new frame is the function itself (enables recursion).
                     // Slot 1..arity are the arguments.
                     let base = fn_slot;

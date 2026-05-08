@@ -13,6 +13,7 @@ fn run(chunk: Chunk) -> Result<Option<VmValue>, VmError> {
         chunk,
         upvalue_defs: vec![],
         return_type: None,
+        param_types: vec![],
     });
     Vm::new(f, PathBuf::new()).run()
 }
