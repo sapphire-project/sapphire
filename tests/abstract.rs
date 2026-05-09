@@ -23,6 +23,14 @@ fn eval_err(src: &str) -> VmError {
         .expect_err("expected vm error")
 }
 
+fn parse_err_msg(src: &str) -> String {
+    let tokens = Lexer::new(src).scan_tokens();
+    let err = Parser::new(tokens)
+        .parse()
+        .expect_err("expected parse error");
+    format!("{}", err)
+}
+
 fn typecheck_err_msg(src: &str) -> String {
     let tokens = Lexer::new(src).scan_tokens();
     let stmts = Parser::new(tokens)
@@ -50,7 +58,7 @@ macro_rules! assert_typecheck_error {
 #[test]
 fn abstract_class_new_is_error() {
     let err = eval_err(
-        "abstract class Shape {\n  abstract def area() -> Float\n}\nShape.new()",
+        "abstract class Shape {\n  def area() -> Float\n}\nShape.new()",
     );
     match err {
         VmError::TypeError { message, .. } => {
@@ -63,7 +71,7 @@ fn abstract_class_new_is_error() {
 #[test]
 fn concrete_subclass_missing_abstract_method_errors_at_new() {
     let err = eval_err(
-        "abstract class Shape {\n  abstract def area() -> Float\n  abstract def perimeter() -> Float\n}\nclass Broken < Shape {\n  def area() -> Float { 0.0 }\n}\nBroken.new()",
+        "abstract class Shape {\n  def area() -> Float\n  def perimeter() -> Float\n}\nclass Broken < Shape {\n  def area() -> Float { 0.0 }\n}\nBroken.new()",
     );
     match err {
         VmError::TypeError { message, .. } => {
@@ -76,34 +84,35 @@ fn concrete_subclass_missing_abstract_method_errors_at_new() {
 
 #[test]
 fn concrete_subclass_implements_abstract_methods() {
-    let src = "abstract class Shape {\n  abstract def area() -> Float\n}\nclass Square < Shape {\n  def area() -> Float { 4.0 }\n}\nSquare.new().area()";
+    let src = "abstract class Shape {\n  def area() -> Float\n}\nclass Square < Shape {\n  def area() -> Float { 4.0 }\n}\nSquare.new().area()";
     assert_eq!(eval(src), VmValue::Float(4.0));
 }
 
 #[test]
 fn abstract_partial_parent_concrete_grandchild() {
-    let src = "abstract class A {\n  abstract def foo() -> Int\n  abstract def bar() -> Int\n}\nabstract class B < A {\n  def foo() -> Int { 1 }\n}\nclass C < B {\n  def bar() -> Int { 2 }\n}\nC.new().foo() + C.new().bar()";
+    let src = "abstract class A {\n  def foo() -> Int\n  def bar() -> Int\n}\nabstract class B < A {\n  def foo() -> Int { 1 }\n}\nclass C < B {\n  def bar() -> Int { 2 }\n}\nC.new().foo() + C.new().bar()";
     assert_eq!(eval(src), VmValue::Int(3));
 }
 
 #[test]
 fn concrete_method_on_abstract_class_callable_on_subclass() {
-    let src = "abstract class Base {\n  abstract def m() -> Int\n  def helper() -> Int { 10 }\n}\nclass Child < Base {\n  def m() -> Int { self.helper() + 1 }\n}\nChild.new().m()";
+    let src = "abstract class Base {\n  def m() -> Int\n  def helper() -> Int { 10 }\n}\nclass Child < Base {\n  def m() -> Int { self.helper() + 1 }\n}\nChild.new().m()";
     assert_eq!(eval(src), VmValue::Int(11));
 }
 
 #[test]
-fn abstract_def_in_non_abstract_class_errors() {
-    assert_typecheck_error!(
-        "class C {\n  abstract def m() -> Int\n}",
-        "abstract method 'm' is only allowed in an abstract class",
+fn abstract_keyword_before_def_is_parse_error() {
+    let msg = parse_err_msg("class C {\n  abstract def m() -> Int\n}");
+    assert!(
+        msg.contains("expected"),
+        "expected parse error message, got: {msg}"
     );
 }
 
 #[test]
 fn concrete_class_must_implement_inherited_abstract() {
     assert_typecheck_error!(
-        "abstract class A {\n  abstract def m() -> Int\n}\nclass B < A {\n}",
+        "abstract class A {\n  def m() -> Int\n}\nclass B < A {\n}",
         "must implement abstract method: m",
     );
 }

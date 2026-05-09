@@ -854,7 +854,7 @@ impl Parser {
                     constants.push((n, Box::new(val)));
                 } else {
                     return Err(SapphireError::ParseError {
-                        message: "expected 'attr', 'abstract', 'class', 'def', 'defp', 'include', 'module', or 'self' in class body"
+                        message: "expected 'attr', 'class', 'def', 'defp', 'include', 'module', or 'self' in class body"
                             .into(),
                         line: self.peek().line, column: self.peek().column,
                     });
@@ -886,20 +886,13 @@ impl Parser {
                     type_ann,
                     default,
                 });
-            } else if self.check(&TokenKind::Abstract) {
-                self.advance(); // consume 'abstract'
-                if !self.check(&TokenKind::Def) && !self.check(&TokenKind::Defp) {
-                    return Err(SapphireError::ParseError {
-                        message: "expected 'def' or 'defp' after 'abstract' in class body".into(),
-                        line: self.peek().line,
-                        column: self.peek().column,
-                    });
-                }
-                let private = self.check(&TokenKind::Defp);
-                methods.push(self.abstract_method_def(private)?);
             } else if self.check(&TokenKind::Def) || self.check(&TokenKind::Defp) {
                 let private = self.check(&TokenKind::Defp);
-                methods.push(self.method_def(private)?);
+                if class_is_abstract {
+                    methods.push(self.method_def_allowing_abstract(private)?);
+                } else {
+                    methods.push(self.method_def(private)?);
+                }
             } else if self.check(&TokenKind::SelfKw) {
                 self.advance(); // consume `self`
                 if !self.check(&TokenKind::LeftBrace) {
@@ -938,7 +931,7 @@ impl Parser {
                 self.advance(); // consume '}'
             } else {
                 return Err(SapphireError::ParseError {
-                    message: "expected 'attr', 'abstract', 'class', 'def', 'defp', 'include', 'module', or 'self' in class body"
+                    message: "expected 'attr', 'class', 'def', 'defp', 'include', 'module', or 'self' in class body"
                         .into(),
                     line: self.peek().line, column: self.peek().column,
                 });
@@ -1176,7 +1169,7 @@ impl Parser {
         })
     }
 
-    fn abstract_method_def(&mut self, private: bool) -> Result<MethodDef, SapphireError> {
+    fn method_def_allowing_abstract(&mut self, private: bool) -> Result<MethodDef, SapphireError> {
         self.advance(); // consume 'def' or 'defp'
         let name = match self.peek().kind.clone() {
             TokenKind::Identifier(n) => {
@@ -1227,16 +1220,30 @@ impl Parser {
             self.advance(); // consume ')'
         }
         let return_type = self.parse_return_type()?;
-        Ok(MethodDef {
-            name,
-            type_params,
-            params,
-            return_type,
-            body: vec![],
-            private,
-            class_method: false,
-            is_abstract: true,
-        })
+        if self.check(&TokenKind::LeftBrace) {
+            let body = self.block_with_rescue()?;
+            Ok(MethodDef {
+                name,
+                type_params,
+                params,
+                return_type,
+                body,
+                private,
+                class_method: false,
+                is_abstract: false,
+            })
+        } else {
+            Ok(MethodDef {
+                name,
+                type_params,
+                params,
+                return_type,
+                body: vec![],
+                private,
+                class_method: false,
+                is_abstract: true,
+            })
+        }
     }
 
     fn interface_method_def(&mut self) -> Result<MethodDef, SapphireError> {
