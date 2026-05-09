@@ -10,7 +10,7 @@ fn make_vm(src: &str) -> Vm {
     let tokens = Lexer::new(src).scan_tokens();
     let stmts = Parser::new(tokens).parse().expect("parse error");
     let func = compile(&stmts).expect("compile error");
-    Vm::new(func)
+    Vm::new(func, std::path::PathBuf::new())
 }
 
 // ── 1. Annotated vs unannotated (shallow, 1M iterations) ──────────────────────
