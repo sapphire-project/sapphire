@@ -30,6 +30,9 @@ pub struct Function {
     /// Return type annotation, if one was present in the source (`-> TypeName`).
     /// When `Some`, the VM checks the actual return value at runtime.
     pub return_type: Option<RuntimeType>,
+    /// Per-parameter runtime type annotations (indexed by argument position).
+    /// `None` for a parameter means no runtime check.
+    pub param_types: Vec<Option<RuntimeType>>,
 }
 
 /// Two `Function` values are equal only if they are the exact same allocation.
