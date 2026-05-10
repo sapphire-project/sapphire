@@ -53,10 +53,10 @@ fn check_param_types(function: &Function, args: &mut [VmValue], line: u32) -> Re
                     line,
                 });
             }
-            if let (RuntimeType::Named(e), VmValue::Int(n)) = (expected, &*val) {
-                if e == "Float" {
-                    *val = VmValue::Float(*n as f64);
-                }
+            if let (RuntimeType::Named(e), VmValue::Int(n)) = (expected, &*val)
+                && e == "Float"
+            {
+                *val = VmValue::Float(*n as f64);
             }
         }
     }
