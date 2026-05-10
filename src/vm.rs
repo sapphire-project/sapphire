@@ -3563,15 +3563,35 @@ impl Vm {
                 OpCode::Yield(arg_count) => {
                     // Walk up the frame stack to find the nearest block — this allows
                     // `yield` inside an inner block to call back to the enclosing method's block.
-                    let block = self
-                        .frames
-                        .iter()
-                        .rev()
-                        .find_map(|f| f.block.clone())
-                        .ok_or_else(|| VmError::TypeError {
-                            message: "yield called without a block".into(),
-                            line,
-                        })?;
+                    //
+                    // We also capture the block of the frame *above* the one supplying
+                    // the dispatch block.  This inherited block is passed into the new
+                    // frame so that `yield` calls made from *inside* the dispatched block
+                    // skip the dispatcher's frame and find the correct enclosing block.
+                    // Without this, a Sapphire-defined `each` that calls `yield` would
+                    // leave its dispatch block visible on the stack, causing every nested
+                    // `yield` to re-enter that block in an infinite loop.
+                    let (block, inherited_block) = {
+                        let source_idx = self
+                            .frames
+                            .iter()
+                            .rposition(|f| f.block.is_some())
+                            .ok_or_else(|| VmError::TypeError {
+                                message: "yield called without a block".into(),
+                                line,
+                            })?;
+                        let block = self.frames[source_idx].block.clone().unwrap();
+                        // The frame below source_idx (i.e. source_idx - 1) is the
+                        // caller of the method that owns the dispatch block.  Its block,
+                        // if any, is what nested `yield` calls inside the dispatched
+                        // block should reach.
+                        let inherited = if source_idx > 0 {
+                            self.frames[source_idx - 1].block.clone()
+                        } else {
+                            None
+                        };
+                        (block, inherited)
+                    };
                     if block.function.arity != arg_count {
                         return Err(VmError::TypeError {
                             message: format!(
@@ -3598,7 +3618,7 @@ impl Vm {
                         upvalues: block.upvalues,
                         ip: 0,
                         base: args_start,
-                        block: None,
+                        block: inherited_block,
                         is_block_caller: false,
                         is_native_block: false,
                         rescues: vec![],

@@ -165,7 +165,7 @@ class EnumerableTest < Test {
     w.push("hi")
     w.push("hello")
     w.push("hey")
-    result = w.select { |s| s.size > 2 }
+    result = w.select { |s| s.size > 4 }
     assert_equal(1, result.size)
     assert_equal("hello", result[0])
   }

@@ -39,8 +39,9 @@ module Enumerable {
   #   [1, 2, 3].any? { |x| x > 2 }   # true
   #
   def any?() {
-    each { |x| return true if yield(x) }
-    false
+    found = false
+    each { |x| if !found && yield(x) { found = true } }
+    found
   }
 
   # Returns true if the block returns truthy for every element.
@@ -49,8 +50,9 @@ module Enumerable {
   #   [1, 2, 3].all? { |x| x > 0 }   # true
   #
   def all?() {
-    each { |x| return false if !yield(x) }
-    true
+    all_match = true
+    each { |x| if all_match && !yield(x) { all_match = false } }
+    all_match
   }
 
   # Returns true if the block never returns truthy.
@@ -59,8 +61,9 @@ module Enumerable {
   #   [1, 2, 3].none? { |x| x > 9 }   # true
   #
   def none?() {
-    each { |x| return false if yield(x) }
-    true
+    no_match = true
+    each { |x| if no_match && yield(x) { no_match = false } }
+    no_match
   }
 
   # Yields each element with its zero-based index.
