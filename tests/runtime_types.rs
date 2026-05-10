@@ -121,3 +121,49 @@ fn param_type_nullable_accepts_nil() {
     assert_eq!(eval("def f(x: Int?) { x }\nf(nil)"), VmValue::Nil);
     assert_eq!(eval("def f(x: Int?) { x }\nf(5)"), VmValue::Int(5));
 }
+
+// ── Int → Float promotion ──────────────────────────────────────────────────────
+
+#[test]
+fn param_type_int_promotes_to_float() {
+    assert_eq!(
+        eval("def foo(n: Float) { n }\nfoo(4)"),
+        VmValue::Float(4.0)
+    );
+}
+
+#[test]
+fn param_type_int_to_float_enables_float_arithmetic() {
+    assert_eq!(
+        eval("def foo(n: Float) { n + 0.5 }\nfoo(4)"),
+        VmValue::Float(4.5)
+    );
+}
+
+#[test]
+fn param_type_int_to_float_method() {
+    let src = "class Scaler {\n  def scale(n: Float) { n * 2.0 }\n}\nScaler.new().scale(3)";
+    assert_eq!(eval(src), VmValue::Float(6.0));
+}
+
+#[test]
+fn param_type_int_to_float_multiple_params() {
+    assert_eq!(
+        eval("def add(a: Float, b: Float) { a + b }\nadd(1, 2)"),
+        VmValue::Float(3.0)
+    );
+}
+
+#[test]
+fn param_type_float_still_accepted_directly() {
+    assert_eq!(
+        eval("def foo(n: Float) { n }\nfoo(4.0)"),
+        VmValue::Float(4.0)
+    );
+}
+
+#[test]
+fn param_type_int_does_not_promote_to_string() {
+    let err = eval_err("def f(x: String) { x }\nf(42)");
+    assert!(matches!(err, VmError::TypeError { .. }));
+}

@@ -99,6 +99,21 @@ fn type_alias_typechecker_resolves() {
 }
 
 #[test]
+fn int_promotes_to_float_param_no_type_error() {
+    typecheck_ok("def foo(n: Float) { n }\nfoo(4)");
+}
+
+#[test]
+fn int_promotes_to_float_multiple_params() {
+    typecheck_ok("def add(a: Float, b: Float) { a + b }\nadd(1, 2)");
+}
+
+#[test]
+fn int_does_not_promote_to_string() {
+    assert_typecheck_error!("def f(x: String) { x }\nf(42)", "String", "Int");
+}
+
+#[test]
 fn parameterized_type_annotation_no_errors() {
     let types = check_types_ok("def sum(items: List[Int]) -> Int { 0 }");
     assert_function_returns!(types, "sum", Int);
