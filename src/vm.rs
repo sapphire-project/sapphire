@@ -38,21 +38,26 @@ fn vm_value_matches_literal(value: &VmValue, literal: &Value) -> bool {
     }
 }
 
-fn check_param_types(function: &Function, args: &[VmValue], line: u32) -> Result<(), VmError> {
+fn check_param_types(function: &Function, args: &mut [VmValue], line: u32) -> Result<(), VmError> {
     for (i, expected_type) in function.param_types.iter().enumerate() {
-        if let (Some(expected), Some(val)) = (expected_type, args.get(i))
-            && !runtime_type_matches(val, expected)
-        {
-            return Err(VmError::TypeError {
-                message: format!(
-                    "argument {} of '{}': expected {}, got {}",
-                    i + 1,
-                    function.name,
-                    runtime_type_display(expected),
-                    value_type_name(val)
-                ),
-                line,
-            });
+        if let (Some(expected), Some(val)) = (expected_type, args.get_mut(i)) {
+            if !runtime_type_matches(val, expected) {
+                return Err(VmError::TypeError {
+                    message: format!(
+                        "argument {} of '{}': expected {}, got {}",
+                        i + 1,
+                        function.name,
+                        runtime_type_display(expected),
+                        value_type_name(val)
+                    ),
+                    line,
+                });
+            }
+            if let (RuntimeType::Named(e), VmValue::Int(n)) = (expected, &*val)
+                && e == "Float"
+            {
+                *val = VmValue::Float(*n as f64);
+            }
         }
     }
     Ok(())
@@ -62,7 +67,9 @@ fn runtime_type_matches(value: &VmValue, expected: &RuntimeType) -> bool {
     match expected {
         RuntimeType::Named(e) => {
             let actual = value_type_name(value);
-            actual == e || (e == "Num" && (actual == "Int" || actual == "Float"))
+            actual == e
+                || (e == "Num" && (actual == "Int" || actual == "Float"))
+                || (e == "Float" && actual == "Int")
         }
         RuntimeType::Literal(v) => vm_value_matches_literal(value, v),
         RuntimeType::Union(arms) => arms.iter().any(|arm| runtime_type_matches(value, arm)),
@@ -2496,7 +2503,7 @@ impl Vm {
                         }
                         check_param_types(
                             &function,
-                            &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                            &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                             line,
                         )?;
                         self.frames.push(CallFrame {
@@ -2564,7 +2571,7 @@ impl Vm {
                             }
                             check_param_types(
                                 &method.function,
-                                &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                                 line,
                             )?;
                             self.frames.push(CallFrame {
@@ -2650,7 +2657,7 @@ impl Vm {
                                     }
                                     check_param_types(
                                         &m.function,
-                                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                                         line,
                                     )?;
                                     self.frames.push(CallFrame {
@@ -2873,7 +2880,7 @@ impl Vm {
                                     }
                                     check_param_types(
                                         &m.function,
-                                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                                         line,
                                     )?;
                                     let class_name = Some(m.defined_in.clone());
@@ -2925,7 +2932,7 @@ impl Vm {
                                 }
                                 check_param_types(
                                     &m.function,
-                                    &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                                     line,
                                 )?;
                                 // recv and args are already on the stack at recv_slot..
@@ -3073,7 +3080,7 @@ impl Vm {
                         }
                         check_param_types(
                             &method.function,
-                            &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                            &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                             line,
                         )?;
                         let class_name = Some(method.defined_in.clone());
@@ -3207,7 +3214,7 @@ impl Vm {
                     }
                     check_param_types(
                         &method.function,
-                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                        &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                         line,
                     )?;
                     let super_dispatch_class = method.defined_in.clone();
@@ -3326,7 +3333,7 @@ impl Vm {
                     }
                     check_param_types(
                         &function,
-                        &self.stack[fn_slot + 1..fn_slot + 1 + arg_count],
+                        &mut self.stack[fn_slot + 1..fn_slot + 1 + arg_count],
                         line,
                     )?;
                     self.frames.push(CallFrame {
@@ -3438,7 +3445,7 @@ impl Vm {
                             }
                             check_param_types(
                                 &m.function,
-                                &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                                 line,
                             )?;
                             let class_name = Some(m.defined_in.clone());
@@ -3464,7 +3471,7 @@ impl Vm {
                                 // Stack is still [..., recv, args...]; leave it for the frame.
                                 check_param_types(
                                     &m.function,
-                                    &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                                     line,
                                 )?;
                                 let class_name = Some(m.defined_in.clone());
@@ -3532,7 +3539,7 @@ impl Vm {
                     }
                     check_param_types(
                         &method.function,
-                        &self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
+                        &mut self.stack[recv_slot + 1..recv_slot + 1 + arg_count],
                         line,
                     )?;
                     let class_name = Some(method.defined_in.clone());
@@ -3794,7 +3801,7 @@ impl Vm {
                     }
                     check_param_types(
                         &function,
-                        &self.stack[fn_slot + 1..fn_slot + 1 + arg_count],
+                        &mut self.stack[fn_slot + 1..fn_slot + 1 + arg_count],
                         line,
                     )?;
                     // Slot 0 of the new frame is the function itself (enables recursion).

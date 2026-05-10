@@ -1601,7 +1601,9 @@ fn types_compatible(actual: &TypeExpr, expected: &TypeExpr) -> bool {
             types_compatible(&base, &TypeExpr::Named(e.clone()))
         }
         (TypeExpr::Named(a), TypeExpr::Named(e)) => {
-            a == e || (e == "Num" && (a == "Int" || a == "Float"))
+            a == e
+                || (e == "Num" && (a == "Int" || a == "Float"))
+                || (e == "Float" && a == "Int")
         }
         (TypeExpr::Named(_), TypeExpr::Literal(_))
         | (TypeExpr::Apply(_, _), TypeExpr::Literal(_))
