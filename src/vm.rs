@@ -1472,6 +1472,10 @@ impl Vm {
                 include_str!("../stdlib/src/string.spr"),
             ),
             ("stdlib/bool.spr", include_str!("../stdlib/src/bool.spr")),
+            (
+                "stdlib/enumerable.spr",
+                include_str!("../stdlib/src/enumerable.spr"),
+            ),
             ("stdlib/list.spr", include_str!("../stdlib/src/list.spr")),
             ("stdlib/map.spr", include_str!("../stdlib/src/map.spr")),
             ("stdlib/set.spr", include_str!("../stdlib/src/set.spr")),
