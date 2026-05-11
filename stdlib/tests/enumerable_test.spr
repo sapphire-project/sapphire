@@ -1,0 +1,229 @@
+class Words {
+  include(Enumerable)
+
+  attr items
+
+  def push(w) {
+    if self.items == nil { self.items = [] }
+    self.items.append(w)
+    self
+  }
+
+  def each {
+    if self.items != nil {
+      self.items.each { |w| yield(w) }
+    }
+  }
+}
+
+class EnumerableTest < Test {
+  # --- List: existing behaviour preserved ---
+
+  def test_list_map {
+    result = [1, 2, 3].map { |x| x * 2 }
+    assert_equal(3, result.size)
+    assert_equal(2, result[0])
+    assert_equal(4, result[1])
+    assert_equal(6, result[2])
+  }
+
+  def test_list_select {
+    result = [1, 2, 3, 4].select { |x| x > 2 }
+    assert_equal(2, result.size)
+    assert_equal(3, result[0])
+    assert_equal(4, result[1])
+  }
+
+  def test_list_reject {
+    result = [1, 2, 3].reject { |x| x == 2 }
+    assert_equal(2, result.size)
+    assert_equal(1, result[0])
+    assert_equal(3, result[1])
+  }
+
+  def test_list_any_true {
+    assert([1, 2, 3].any? { |x| x > 2 })
+  }
+
+  def test_list_any_false {
+    assert(![1, 2, 3].any? { |x| x > 9 })
+  }
+
+  def test_list_all_true {
+    assert([1, 2, 3].all? { |x| x > 0 })
+  }
+
+  def test_list_all_false {
+    assert(![1, 2, 3].all? { |x| x > 2 })
+  }
+
+  def test_list_none_true {
+    assert([1, 2, 3].none? { |x| x > 9 })
+  }
+
+  def test_list_none_false {
+    assert(![1, 2, 3].none? { |x| x > 2 })
+  }
+
+  def test_list_each_with_index {
+    indices = []
+    items = []
+    ["a", "b", "c"].each_with_index { |item, i|
+      items.append(item)
+      indices.append(i)
+    }
+    assert_equal(0, indices[0])
+    assert_equal(1, indices[1])
+    assert_equal(2, indices[2])
+    assert_equal("a", items[0])
+    assert_equal("b", items[1])
+    assert_equal("c", items[2])
+  }
+
+  def test_list_zip {
+    result = [1, 2, 3].zip([4, 5, 6])
+    assert_equal(3, result.size)
+    assert_equal(1, result[0][0])
+    assert_equal(4, result[0][1])
+    assert_equal(2, result[1][0])
+    assert_equal(5, result[1][1])
+    assert_equal(3, result[2][0])
+    assert_equal(6, result[2][1])
+  }
+
+  # --- Set: select/reject still return Set; other methods work ---
+
+  def test_set_map_returns_list {
+    result = Set.new([1, 2, 3]).map { |x| x * 2 }
+    assert_equal(3, result.size)
+    assert(result.include?(2))
+    assert(result.include?(4))
+    assert(result.include?(6))
+  }
+
+  def test_set_select_returns_set {
+    result = Set.new([1, 2, 3, 4]).select { |x| x > 2 }
+    assert_equal(2, result.size)
+    assert(result.include?(3))
+    assert(result.include?(4))
+  }
+
+  def test_set_reject_returns_set {
+    result = Set.new([1, 2, 3]).reject { |x| x == 2 }
+    assert_equal(2, result.size)
+    assert(!result.include?(2))
+    assert(result.include?(1))
+    assert(result.include?(3))
+  }
+
+  def test_set_any_true {
+    assert(Set.new([1, 2, 3]).any? { |x| x > 2 })
+  }
+
+  def test_set_any_false {
+    assert(!Set.new([1, 2, 3]).any? { |x| x > 9 })
+  }
+
+  def test_set_all_true {
+    assert(Set.new([1, 2, 3]).all? { |x| x > 0 })
+  }
+
+  def test_set_all_false {
+    assert(!Set.new([1, 2, 3]).all? { |x| x > 2 })
+  }
+
+  def test_set_none_true {
+    assert(Set.new([1, 2, 3]).none? { |x| x > 9 })
+  }
+
+  def test_set_none_false {
+    assert(!Set.new([1, 2, 3]).none? { |x| x > 2 })
+  }
+
+  def test_set_each_with_index {
+    indices = []
+    Set.new(["a", "b", "c"]).each_with_index { |item, i| indices.append(i) }
+    assert_equal(0, indices[0])
+    assert_equal(1, indices[1])
+    assert_equal(2, indices[2])
+  }
+
+  # --- Custom class with include(Enumerable) ---
+
+  def test_custom_map {
+    w = Words.new
+    w.push("hello")
+    w.push("world")
+    result = w.map { |s| s.size }
+    assert_equal(2, result.size)
+    assert_equal(5, result[0])
+    assert_equal(5, result[1])
+  }
+
+  def test_custom_select {
+    w = Words.new
+    w.push("hi")
+    w.push("hello")
+    w.push("hey")
+    result = w.select { |s| s.size > 4 }
+    assert_equal(1, result.size)
+    assert_equal("hello", result[0])
+  }
+
+  def test_custom_reject {
+    w = Words.new
+    w.push("hi")
+    w.push("hello")
+    result = w.reject { |s| s.size > 2 }
+    assert_equal(1, result.size)
+    assert_equal("hi", result[0])
+  }
+
+  def test_custom_any_true {
+    w = Words.new
+    w.push("hello")
+    assert(w.any? { |s| s.size == 5 })
+  }
+
+  def test_custom_any_false {
+    w = Words.new
+    w.push("hello")
+    assert(!w.any? { |s| s.size == 99 })
+  }
+
+  def test_custom_all_true {
+    w = Words.new
+    w.push("hello")
+    w.push("world")
+    assert(w.all? { |s| s.size == 5 })
+  }
+
+  def test_custom_all_false {
+    w = Words.new
+    w.push("hi")
+    w.push("hello")
+    assert(!w.all? { |s| s.size == 5 })
+  }
+
+  def test_custom_none_true {
+    w = Words.new
+    w.push("hello")
+    assert(w.none? { |s| s.size == 99 })
+  }
+
+  def test_custom_none_false {
+    w = Words.new
+    w.push("hello")
+    assert(!w.none? { |s| s.size == 5 })
+  }
+
+  def test_custom_each_with_index {
+    w = Words.new
+    w.push("a")
+    w.push("b")
+    indices = []
+    w.each_with_index { |item, i| indices.append(i) }
+    assert_equal(0, indices[0])
+    assert_equal(1, indices[1])
+  }
+}
