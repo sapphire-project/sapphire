@@ -30,7 +30,7 @@ def first_or_default[T](items: List[T], default: T) -> T {
 
 b = Box.new(value: 42)
 print b.get
-print b.to_s
+print(b.to_s)
 
 s = Box.new(value: "hello")
 print s.get
