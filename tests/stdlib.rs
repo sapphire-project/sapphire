@@ -59,3 +59,6 @@ mod env;
 
 #[path = "stdlib/socket.rs"]
 mod socket;
+
+#[path = "stdlib/io.rs"]
+mod io;

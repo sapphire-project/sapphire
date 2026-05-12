@@ -1908,6 +1908,10 @@ impl Parser {
                         self.advance();
                         "match".to_string()
                     }
+                    TokenKind::Print => {
+                        self.advance();
+                        "print".to_string()
+                    }
                     _ => {
                         return Err(SapphireError::ParseError {
                             message: "expected field or method name after '.'".into(),

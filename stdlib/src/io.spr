@@ -1,0 +1,7 @@
+# IO provides access to the standard input and output streams.
+#
+#   IO.puts("hello")       # write to stdout with trailing newline → nil
+#   IO.print("no nl")      # write to stdout without newline → nil
+#   line = IO.gets         # read one line from stdin, strip newline → Str or nil on EOF
+#
+class IO { }

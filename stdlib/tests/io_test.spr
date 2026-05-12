@@ -1,0 +1,9 @@
+class IOTest < Test {
+  def test_puts_returns_nil {
+    assert_nil(IO.puts("sapphire io test"))
+  }
+
+  def test_print_returns_nil {
+    assert_nil(IO.print("no newline"))
+  }
+}

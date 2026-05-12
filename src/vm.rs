@@ -574,6 +574,7 @@ pub struct CoreClasses {
     pub env_cls: Option<GcRef>,
     pub file_cls: Option<GcRef>,
     pub math_cls: Option<GcRef>,
+    pub io_cls: Option<GcRef>,
 }
 
 /// Per-class metadata stored by DefClass.
@@ -1342,11 +1343,18 @@ impl Vm {
             methods: HashMap::new(),
             class_methods: HashMap::new(),
         });
+        let io_cls = self.heap.alloc(HeapObject::ClassObject {
+            name: "IO".into(),
+            superclass: Some(object),
+            class_ref: None,
+            methods: HashMap::new(),
+            class_methods: HashMap::new(),
+        });
 
         // Two-phase fixup: set class_ref now that class_cls is known.
         for r in [
             object, class_cls, set_cls, nil_cls, int_cls, float_cls, string_cls, range_cls,
-            list_cls, map_cls, env_cls, file_cls, math_cls,
+            list_cls, map_cls, env_cls, file_cls, math_cls, io_cls,
         ] {
             if let HeapObject::ClassObject { class_ref, .. } = self.heap.get_mut(r) {
                 *class_ref = Some(class_cls);
@@ -1367,6 +1375,7 @@ impl Vm {
             env_cls: Some(env_cls),
             file_cls: Some(file_cls),
             math_cls: Some(math_cls),
+            io_cls: Some(io_cls),
         };
         crate::native_set::register_methods(&mut self.heap, set_cls);
         crate::native_set::register_class_methods(&mut self.heap, set_cls);
@@ -1380,6 +1389,7 @@ impl Vm {
         crate::native_list::register_methods(&mut self.heap, list_cls);
         crate::native_map::register_methods(&mut self.heap, map_cls);
         crate::native_math::register_class_methods(&mut self.heap, math_cls);
+        crate::native_io::register_class_methods(&mut self.heap, io_cls);
     }
 
     /// Bootstrapped `ClassObject` for this primitive receiver, if any.
@@ -1460,6 +1470,7 @@ impl Vm {
             "Env" => self.core_classes.env_cls,
             "File" => self.core_classes.file_cls,
             "Math" => self.core_classes.math_cls,
+            "IO" => self.core_classes.io_cls,
             _ => None,
         }
     }
@@ -1491,6 +1502,7 @@ impl Vm {
             ("stdlib/test.spr", include_str!("../stdlib/src/test.spr")),
             ("stdlib/file.spr", include_str!("../stdlib/src/file.spr")),
             ("stdlib/env.spr", include_str!("../stdlib/src/env.spr")),
+            ("stdlib/io.spr", include_str!("../stdlib/src/io.spr")),
             (
                 "stdlib/process.spr",
                 include_str!("../stdlib/src/process.spr"),
