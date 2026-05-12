@@ -37,6 +37,7 @@ pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
     allow_trailing_block: bool,
+    allow_inline_rescue: bool,
 }
 
 impl Parser {
@@ -45,6 +46,7 @@ impl Parser {
             tokens,
             current: 0,
             allow_trailing_block: true,
+            allow_inline_rescue: true,
         }
     }
 
@@ -357,6 +359,25 @@ impl Parser {
                 then_branch: vec![stmt],
                 else_branch: None,
             });
+        }
+        Ok(stmt)
+    }
+
+    fn statement_without_inline_rescue(&mut self) -> Result<Expr, SapphireError> {
+        let previous = self.allow_inline_rescue;
+        self.allow_inline_rescue = false;
+        let mut stmt = self.statement_inner()?;
+        self.allow_inline_rescue = previous;
+        if self.check(&TokenKind::If) {
+            self.advance();
+            self.allow_trailing_block = false;
+            let condition = self.logical()?;
+            self.allow_trailing_block = true;
+            stmt = Expr::If {
+                condition: Box::new(condition),
+                then_branch: vec![stmt],
+                else_branch: None,
+            };
         }
         Ok(stmt)
     }
@@ -1385,7 +1406,7 @@ impl Parser {
             {
                 break;
             }
-            body.push(self.statement()?);
+            body.push(self.statement_without_inline_rescue()?);
         }
         let (rescue_clauses, else_body, ensure_body) =
             self.parse_legacy_exception_clauses(&TokenKind::End)?;
@@ -1445,7 +1466,7 @@ impl Parser {
             {
                 break;
             }
-            body.push(self.statement()?);
+            body.push(self.statement_without_inline_rescue()?);
         }
         if self.check(&TokenKind::Rescue)
             || self.check(&TokenKind::Else)
@@ -1543,7 +1564,7 @@ impl Parser {
                 {
                     break;
                 }
-                body.push(self.statement()?);
+                body.push(self.statement_without_inline_rescue()?);
             }
             rescue_clauses.push(RescueClause {
                 var,
@@ -1559,7 +1580,7 @@ impl Parser {
                 if self.check(&TokenKind::Ensure) || self.check(end) || self.is_at_end() {
                     break;
                 }
-                body.push(self.statement()?);
+                body.push(self.statement_without_inline_rescue()?);
             }
             body
         } else {
@@ -1573,7 +1594,7 @@ impl Parser {
                 if self.check(end) || self.is_at_end() {
                     break;
                 }
-                body.push(self.statement()?);
+                body.push(self.statement_without_inline_rescue()?);
             }
             body
         } else {
@@ -1651,7 +1672,7 @@ impl Parser {
                 right: Box::new(right),
             };
         }
-        if self.check(&TokenKind::Rescue) {
+        if self.allow_inline_rescue && self.check(&TokenKind::Rescue) {
             self.advance();
             let fallback = self.logical()?;
             left = Expr::Begin {
