@@ -1650,6 +1650,21 @@ i"#;
 }
 
 #[test]
+fn block_suffix_rescue_allows_break() {
+    let src = r#"i = 0
+while i < 3 {
+  i = i + 1
+  if i == 2 { raise "bad" }
+} rescue e {
+  break
+} ensure {
+  i = i + 10
+}
+i"#;
+    assert_eq!(eval(src), VmValue::Int(12));
+}
+
+#[test]
 fn inline_rescue_in_function() {
     let src = r#"def risky(x) {
   if x < 0 { raise "bad" }
