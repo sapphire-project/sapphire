@@ -508,7 +508,6 @@ impl TypeChecker {
                     },
                 );
             }
-            Expr::Print(inner) => self.check_expr(inner),
             Expr::Class {
                 name,
                 type_params,
@@ -842,7 +841,7 @@ impl TypeChecker {
                     self.check_expr(s);
                 }
             }
-
+            Expr::Print(inner) => self.check_expr(inner),
             Expr::Class {
                 name,
                 type_params,
@@ -1419,7 +1418,6 @@ impl TypeChecker {
                 }
                 _ => None,
             },
-
             Expr::Print(inner) => self.infer_type(inner),
             Expr::If {
                 then_branch,

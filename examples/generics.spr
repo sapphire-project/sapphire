@@ -24,7 +24,7 @@ def identity[T](x: T) -> T {
 }
 
 def first_or_default[T](items: List[T], default: T) -> T {
-  if items.empty?() { default }
+  if items.empty? { default }
   else { items.first }
 }
 

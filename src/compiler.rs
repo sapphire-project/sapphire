@@ -894,6 +894,7 @@ impl Compiler {
                 self.emit(OpCode::SuperInvoke(name_idx, arg_count));
                 Ok(())
             }
+
             Expr::Print(inner) => {
                 self.expr(inner)?;
                 self.emit(OpCode::Print);
