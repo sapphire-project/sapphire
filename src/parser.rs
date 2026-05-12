@@ -1,4 +1,7 @@
-use crate::ast::{Block, CallArg, Expr, FieldDef, MatchArm, MethodDef, ParamDef, Pattern, StringPart, TypeExpr};
+use crate::ast::{
+    Block, CallArg, Expr, FieldDef, MatchArm, MethodDef, ParamDef, Pattern, RescueClause,
+    StringPart, TypeExpr,
+};
 use crate::error::SapphireError;
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenKind};
@@ -78,10 +81,10 @@ impl Parser {
     }
 
     fn parse_return_type(&mut self) -> Result<Option<TypeExpr>, SapphireError> {
-        if !self.check(&TokenKind::Arrow) {
+        if !self.check(&TokenKind::Arrow) && !self.check(&TokenKind::Colon) {
             return Ok(None);
         }
-        self.advance(); // consume '->'
+        self.advance(); // consume '->' or ':'
         Ok(Some(self.parse_type_expr()?))
     }
 
@@ -339,7 +342,10 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Expr, SapphireError> {
-        let stmt = self.statement_inner()?;
+        let mut stmt = self.statement_inner()?;
+        if self.check(&TokenKind::Rescue) || self.check(&TokenKind::Ensure) {
+            stmt = self.wrap_exception_suffix(vec![stmt])?;
+        }
         // Trailing conditional: `expr if condition`
         if self.check(&TokenKind::If) {
             self.advance();
@@ -422,6 +428,9 @@ impl Parser {
         }
         if self.check(&TokenKind::Begin) {
             return self.begin_expr();
+        }
+        if self.check(&TokenKind::Try) {
+            return self.try_expr();
         }
         if self.check(&TokenKind::Print) {
             self.advance();
@@ -1368,45 +1377,18 @@ impl Parser {
         let mut body = Vec::new();
         loop {
             self.skip_terminators();
-            if self.check(&TokenKind::Rescue) || self.check(&TokenKind::End) || self.is_at_end() {
+            if self.check(&TokenKind::Rescue)
+                || self.check(&TokenKind::Else)
+                || self.check(&TokenKind::Ensure)
+                || self.check(&TokenKind::End)
+                || self.is_at_end()
+            {
                 break;
             }
             body.push(self.statement()?);
         }
-        let (rescue_var, rescue_body) = if self.check(&TokenKind::Rescue) {
-            self.advance(); // consume 'rescue'
-            let var = if let TokenKind::Identifier(n) = self.peek().kind.clone() {
-                self.advance();
-                Some(n)
-            } else {
-                None
-            };
-            let mut rescue_body = Vec::new();
-            loop {
-                self.skip_terminators();
-                if self.check(&TokenKind::Else) || self.check(&TokenKind::End) || self.is_at_end() {
-                    break;
-                }
-                rescue_body.push(self.statement()?);
-            }
-            (var, rescue_body)
-        } else {
-            (None, Vec::new())
-        };
-        let else_body = if self.check(&TokenKind::Else) {
-            self.advance(); // consume 'else'
-            let mut else_body = Vec::new();
-            loop {
-                self.skip_terminators();
-                if self.check(&TokenKind::End) || self.is_at_end() {
-                    break;
-                }
-                else_body.push(self.statement()?);
-            }
-            else_body
-        } else {
-            Vec::new()
-        };
+        let (rescue_clauses, else_body, ensure_body) =
+            self.parse_legacy_exception_clauses(&TokenKind::End)?;
         if !self.check(&TokenKind::End) {
             return Err(SapphireError::ParseError {
                 message: "expected 'end' to close 'begin'".into(),
@@ -1417,10 +1399,28 @@ impl Parser {
         self.advance(); // consume 'end'
         Ok(Expr::Begin {
             body,
-            rescue_var,
-            rescue_body,
+            rescue_clauses,
             else_body,
+            ensure_body,
         })
+    }
+
+    fn try_expr(&mut self) -> Result<Expr, SapphireError> {
+        self.advance(); // consume 'try'
+        let body = self.block()?;
+        if self.check(&TokenKind::Rescue)
+            || self.check(&TokenKind::Else)
+            || self.check(&TokenKind::Ensure)
+        {
+            self.wrap_exception_suffix(body)
+        } else {
+            Ok(Expr::Begin {
+                body,
+                rescue_clauses: Vec::new(),
+                else_body: Vec::new(),
+                ensure_body: Vec::new(),
+            })
+        }
     }
 
     // Like block(), but wraps the body in Expr::Begin if a rescue clause is present.
@@ -1438,6 +1438,8 @@ impl Parser {
         loop {
             self.skip_terminators();
             if self.check(&TokenKind::Rescue)
+                || self.check(&TokenKind::Else)
+                || self.check(&TokenKind::Ensure)
                 || self.check(&TokenKind::RightBrace)
                 || self.is_at_end()
             {
@@ -1445,22 +1447,12 @@ impl Parser {
             }
             body.push(self.statement()?);
         }
-        if self.check(&TokenKind::Rescue) {
-            self.advance(); // consume 'rescue'
-            let rescue_var = if let TokenKind::Identifier(n) = self.peek().kind.clone() {
-                self.advance();
-                Some(n)
-            } else {
-                None
-            };
-            let mut rescue_body = Vec::new();
-            loop {
-                self.skip_terminators();
-                if self.check(&TokenKind::RightBrace) || self.is_at_end() {
-                    break;
-                }
-                rescue_body.push(self.statement()?);
-            }
+        if self.check(&TokenKind::Rescue)
+            || self.check(&TokenKind::Else)
+            || self.check(&TokenKind::Ensure)
+        {
+            let (rescue_clauses, else_body, ensure_body) =
+                self.parse_legacy_exception_clauses(&TokenKind::RightBrace)?;
             if !self.check(&TokenKind::RightBrace) {
                 return Err(SapphireError::ParseError {
                     message: "expected '}'".into(),
@@ -1471,9 +1463,9 @@ impl Parser {
             self.advance(); // consume '}'
             Ok(vec![Expr::Begin {
                 body,
-                rescue_var,
-                rescue_body,
-                else_body: Vec::new(),
+                rescue_clauses,
+                else_body,
+                ensure_body,
             }])
         } else {
             if !self.check(&TokenKind::RightBrace) {
@@ -1484,8 +1476,127 @@ impl Parser {
                 });
             }
             self.advance(); // consume '}'
-            Ok(body)
+            if self.check(&TokenKind::Rescue)
+                || self.check(&TokenKind::Else)
+                || self.check(&TokenKind::Ensure)
+            {
+                Ok(vec![self.wrap_exception_suffix(body)?])
+            } else {
+                Ok(body)
+            }
         }
+    }
+
+    fn wrap_exception_suffix(&mut self, body: Vec<Expr>) -> Result<Expr, SapphireError> {
+        let (rescue_clauses, else_body, ensure_body) = self.parse_braced_exception_suffix()?;
+        Ok(Expr::Begin {
+            body,
+            rescue_clauses,
+            else_body,
+            ensure_body,
+        })
+    }
+
+    fn parse_braced_exception_suffix(
+        &mut self,
+    ) -> Result<(Vec<RescueClause>, Vec<Expr>, Vec<Expr>), SapphireError> {
+        let mut rescue_clauses = Vec::new();
+        while self.check(&TokenKind::Rescue) {
+            let (var, type_ann) = self.parse_rescue_header()?;
+            let body = self.block()?;
+            rescue_clauses.push(RescueClause {
+                var,
+                type_ann,
+                body,
+            });
+        }
+        let else_body = if self.check(&TokenKind::Else) {
+            self.advance();
+            self.block()?
+        } else {
+            Vec::new()
+        };
+        let ensure_body = if self.check(&TokenKind::Ensure) {
+            self.advance();
+            self.block()?
+        } else {
+            Vec::new()
+        };
+        Ok((rescue_clauses, else_body, ensure_body))
+    }
+
+    fn parse_legacy_exception_clauses(
+        &mut self,
+        end: &TokenKind,
+    ) -> Result<(Vec<RescueClause>, Vec<Expr>, Vec<Expr>), SapphireError> {
+        let mut rescue_clauses = Vec::new();
+        while self.check(&TokenKind::Rescue) {
+            let (var, type_ann) = self.parse_rescue_header()?;
+            let mut body = Vec::new();
+            loop {
+                self.skip_terminators();
+                if self.check(&TokenKind::Rescue)
+                    || self.check(&TokenKind::Else)
+                    || self.check(&TokenKind::Ensure)
+                    || self.check(end)
+                    || self.is_at_end()
+                {
+                    break;
+                }
+                body.push(self.statement()?);
+            }
+            rescue_clauses.push(RescueClause {
+                var,
+                type_ann,
+                body,
+            });
+        }
+        let else_body = if self.check(&TokenKind::Else) {
+            self.advance();
+            let mut body = Vec::new();
+            loop {
+                self.skip_terminators();
+                if self.check(&TokenKind::Ensure) || self.check(end) || self.is_at_end() {
+                    break;
+                }
+                body.push(self.statement()?);
+            }
+            body
+        } else {
+            Vec::new()
+        };
+        let ensure_body = if self.check(&TokenKind::Ensure) {
+            self.advance();
+            let mut body = Vec::new();
+            loop {
+                self.skip_terminators();
+                if self.check(end) || self.is_at_end() {
+                    break;
+                }
+                body.push(self.statement()?);
+            }
+            body
+        } else {
+            Vec::new()
+        };
+        Ok((rescue_clauses, else_body, ensure_body))
+    }
+
+    fn parse_rescue_header(&mut self) -> Result<(Option<String>, Option<TypeExpr>), SapphireError> {
+        self.advance(); // consume 'rescue'
+        let var = if let TokenKind::Identifier(n) = self.peek().kind.clone() {
+            self.advance();
+            Some(n)
+        } else {
+            None
+        };
+        let type_ann = if self.check(&TokenKind::Colon) {
+            self.advance();
+            Some(self.parse_type_expr()?)
+        } else {
+            None
+        };
+        Ok((var, type_ann))
     }
 
     fn block(&mut self) -> Result<Vec<Expr>, SapphireError> {
@@ -1524,6 +1635,9 @@ impl Parser {
         if self.check(&TokenKind::Begin) {
             return self.begin_expr();
         }
+        if self.check(&TokenKind::Try) {
+            return self.try_expr();
+        }
         if self.check(&TokenKind::While) {
             return self.while_statement();
         }
@@ -1535,6 +1649,20 @@ impl Parser {
                 left: Box::new(left),
                 op,
                 right: Box::new(right),
+            };
+        }
+        if self.check(&TokenKind::Rescue) {
+            self.advance();
+            let fallback = self.logical()?;
+            left = Expr::Begin {
+                body: vec![left],
+                rescue_clauses: vec![RescueClause {
+                    var: None,
+                    type_ann: None,
+                    body: vec![fallback],
+                }],
+                else_body: Vec::new(),
+                ensure_body: Vec::new(),
             };
         }
         Ok(left)
@@ -1716,8 +1844,14 @@ impl Parser {
                         n
                     }
                     // Allow keywords as method/field names after '.' (e.g. self.class, r.match(...))
-                    TokenKind::Class => { self.advance(); "class".to_string() }
-                    TokenKind::Match => { self.advance(); "match".to_string() }
+                    TokenKind::Class => {
+                        self.advance();
+                        "class".to_string()
+                    }
+                    TokenKind::Match => {
+                        self.advance();
+                        "match".to_string()
+                    }
                     _ => {
                         return Err(SapphireError::ParseError {
                             message: "expected field or method name after '.'".into(),
@@ -1772,7 +1906,10 @@ impl Parser {
                         self.advance();
                         n
                     }
-                    TokenKind::Match => { self.advance(); "match".to_string() }
+                    TokenKind::Match => {
+                        self.advance();
+                        "match".to_string()
+                    }
                     _ => {
                         return Err(SapphireError::ParseError {
                             message: "expected method or field name after '&.'".into(),
@@ -2178,7 +2315,8 @@ impl Parser {
         if !self.check(&TokenKind::LeftBrace) {
             return Err(SapphireError::ParseError {
                 message: "expected '{' after match scrutinee".into(),
-                line: self.peek().line, column: self.peek().column,
+                line: self.peek().line,
+                column: self.peek().column,
             });
         }
         self.advance(); // consume '{'
@@ -2193,14 +2331,16 @@ impl Parser {
         if !self.check(&TokenKind::RightBrace) {
             return Err(SapphireError::ParseError {
                 message: "expected '}' to close match".into(),
-                line: self.peek().line, column: self.peek().column,
+                line: self.peek().line,
+                column: self.peek().column,
             });
         }
         self.advance(); // consume '}'
         if arms.is_empty() {
             return Err(SapphireError::ParseError {
                 message: "match expression has no arms".into(),
-                line: self.peek().line, column: self.peek().column,
+                line: self.peek().line,
+                column: self.peek().column,
             });
         }
         // Validate: last arm must be exhaustive (Wildcard or bare Binding without guard).
@@ -2210,8 +2350,11 @@ impl Parser {
             && matches!(last.patterns[0], Pattern::Wildcard | Pattern::Binding(_));
         if !last_exhaustive {
             return Err(SapphireError::ParseError {
-                message: "last match arm must be a wildcard '_' or bare binding (exhaustive fallback)".into(),
-                line: self.peek().line, column: self.peek().column,
+                message:
+                    "last match arm must be a wildcard '_' or bare binding (exhaustive fallback)"
+                        .into(),
+                line: self.peek().line,
+                column: self.peek().column,
             });
         }
         Ok(Expr::Match {
@@ -2232,7 +2375,8 @@ impl Parser {
             if patterns.len() != 1 || !matches!(patterns[0], Pattern::Binding(_)) {
                 return Err(SapphireError::ParseError {
                     message: "guard 'if' is only allowed on a single binding pattern".into(),
-                    line: self.peek().line, column: self.peek().column,
+                    line: self.peek().line,
+                    column: self.peek().column,
                 });
             }
             self.advance(); // consume 'if'
@@ -2246,12 +2390,17 @@ impl Parser {
         if !self.check(&TokenKind::FatArrow) {
             return Err(SapphireError::ParseError {
                 message: "expected '=>' after match pattern".into(),
-                line: self.peek().line, column: self.peek().column,
+                line: self.peek().line,
+                column: self.peek().column,
             });
         }
         self.advance(); // consume '=>'
         let body = self.block()?;
-        Ok(MatchArm { patterns, guard, body })
+        Ok(MatchArm {
+            patterns,
+            guard,
+            body,
+        })
     }
 
     fn parse_pattern(&mut self) -> Result<Pattern, SapphireError> {
@@ -2276,7 +2425,8 @@ impl Parser {
             if !self.check(&TokenKind::RightBracket) {
                 return Err(SapphireError::ParseError {
                     message: "expected ']' to close list pattern".into(),
-                    line: self.peek().line, column: self.peek().column,
+                    line: self.peek().line,
+                    column: self.peek().column,
                 });
             }
             self.advance(); // consume ']'
@@ -2313,7 +2463,8 @@ impl Parser {
                 }
                 return Err(SapphireError::ParseError {
                     message: "expected integer after '..' in range pattern".into(),
-                    line: self.peek().line, column: self.peek().column,
+                    line: self.peek().line,
+                    column: self.peek().column,
                 });
             }
             return Ok(Pattern::Literal(Value::Int(n)));
@@ -2339,7 +2490,8 @@ impl Parser {
         }
         Err(SapphireError::ParseError {
             message: format!("expected pattern, got '{:?}'", self.peek().kind),
-            line: self.peek().line, column: self.peek().column,
+            line: self.peek().line,
+            column: self.peek().column,
         })
     }
 }

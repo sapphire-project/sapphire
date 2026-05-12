@@ -120,9 +120,9 @@ fn bitwise_operator_precedence() {
     assert_eq!(eval("1 << 3 == 8"), VmValue::Bool(true));
     // & binds tighter than |
     assert_eq!(eval("5 | 3 & 6"), VmValue::Int(7)); // 5 | (3 & 6) = 5 | 2 = 7
-    // ^ between & and |
+                                                    // ^ between & and |
     assert_eq!(eval("5 | 3 ^ 6"), VmValue::Int(5)); // 5 | (3 ^ 6) = 5 | 5 = 5
-    // arithmetic binds tighter than bitwise
+                                                    // arithmetic binds tighter than bitwise
     assert_eq!(eval("3 + 1 & 6"), VmValue::Int(4)); // (3+1) & 6 = 4 & 6 = 4
 }
 
@@ -1577,6 +1577,76 @@ x"#;
 fn begin_no_error_skips_rescue() {
     let src = "x = 0\nbegin\nx = 42\nrescue e\nx = 1\nend\nx";
     assert_eq!(eval(src), VmValue::Int(42));
+}
+
+#[test]
+fn try_rescue_else_ensure() {
+    let src = r#"x = 0
+result = try {
+  x = x + 1
+  10
+} rescue e {
+  0
+} else {
+  x = x + 10
+  20
+} ensure {
+  x = x + 100
+}
+x + result"#;
+    assert_eq!(eval(src), VmValue::Int(131));
+}
+
+#[test]
+fn multiple_typed_rescue_handlers() {
+    let src = r#"class IoError {}
+class ParseError {}
+def handle(kind) {
+  try {
+    if kind == 0 { raise IoError.new() }
+    raise ParseError.new()
+  } rescue e : IoError {
+    1
+  } rescue e {
+    2
+  }
+}
+handle(0) * 10 + handle(1)"#;
+    assert_eq!(eval(src), VmValue::Int(12));
+}
+
+#[test]
+fn inline_rescue_assigns_fallback() {
+    let src = r#"x = 1 / 0 rescue 7
+x"#;
+    assert_eq!(eval(src), VmValue::Int(7));
+}
+
+#[test]
+fn method_suffix_rescue() {
+    let src = r#"def risky(x: Int): Int {
+  if x < 0 { raise "bad" }
+  x * 2
+} rescue e {
+  0
+}
+risky(5) + risky(-1)"#;
+    assert_eq!(eval(src), VmValue::Int(10));
+}
+
+#[test]
+fn block_suffix_rescue_and_ensure() {
+    let src = r#"i = 0
+while i < 3 {
+  i = i + 1
+  if i == 2 { raise "bad" }
+} rescue e {
+  i = 10
+} ensure {
+  i = i + 1
+}
+i"#;
+    assert_eq!(eval(src), VmValue::Int(11));
 }
 
 #[test]

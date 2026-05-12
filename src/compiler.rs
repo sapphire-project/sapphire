@@ -1,4 +1,4 @@
-use crate::ast::{Block, Expr, MatchArm, MethodDef, Pattern, StringPart, TypeExpr};
+use crate::ast::{Block, Expr, MatchArm, MethodDef, Pattern, RescueClause, StringPart, TypeExpr};
 use crate::chunk::{Chunk, Constant, Function, OpCode, RuntimeType, UpvalueDef};
 use crate::token::TokenKind;
 use crate::value::Value;
@@ -950,8 +950,7 @@ impl Compiler {
                     .iter()
                     .map(|p| {
                         p.type_ann.as_ref().and_then(|te| {
-                            let erased =
-                                erase_type_vars(&self.resolve_type_expr(te), &fn_tvars);
+                            let erased = erase_type_vars(&self.resolve_type_expr(te), &fn_tvars);
                             self.type_expr_runtime(Some(&erased))
                         })
                     })
@@ -1022,10 +1021,10 @@ impl Compiler {
 
             Expr::Begin {
                 body,
-                rescue_var,
-                rescue_body,
+                rescue_clauses,
                 else_body,
-            } => self.compile_begin_expr(body, rescue_var, rescue_body, else_body),
+                ensure_body,
+            } => self.compile_begin_expr(body, rescue_clauses, else_body, ensure_body),
 
             Expr::Lambda { params, body } => {
                 let line = self.state().current_line;
@@ -1218,17 +1217,23 @@ impl Compiler {
             }
             Expr::Begin {
                 body,
-                rescue_body,
+                rescue_clauses,
                 else_body,
+                ensure_body,
                 ..
             } => {
                 for e in body {
                     self.hoist_while_locals_in_stmt(e);
                 }
-                for e in rescue_body {
-                    self.hoist_while_locals_in_stmt(e);
+                for clause in rescue_clauses {
+                    for e in &clause.body {
+                        self.hoist_while_locals_in_stmt(e);
+                    }
                 }
                 for e in else_body {
+                    self.hoist_while_locals_in_stmt(e);
+                }
+                for e in ensure_body {
                     self.hoist_while_locals_in_stmt(e);
                 }
             }
@@ -1452,8 +1457,7 @@ impl Compiler {
                 // 3. Each element: load inline (no temp local), consume element with check.
                 for (i, sub_pat) in sub_patterns.iter().enumerate() {
                     self.emit(OpCode::GetLocal(scrutinee_slot));
-                    let i_const =
-                        self.state_mut().chunk.add_constant(Constant::Int(i as i64));
+                    let i_const = self.state_mut().chunk.add_constant(Constant::Int(i as i64));
                     self.emit(OpCode::Constant(i_const));
                     self.emit(OpCode::Index); // TOS = element (temporary)
                     self.emit_list_element_check(sub_pat)?; // consumes TOS, pushes bool
@@ -1492,13 +1496,13 @@ impl Compiler {
                 let elem_pos = self.state().locals.len();
                 // Push a copy so GreaterEqual can consume it without losing the original.
                 self.emit(OpCode::GetLocal(elem_pos)); // [elem, elem_copy]
-                self.literal(low)?;                    // [elem, elem_copy, low]
-                self.emit(OpCode::GreaterEqual);       // [elem, bool1] — copy consumed
-                // JumpIfFalse pops bool1 on both branches, leaving [elem] either way.
+                self.literal(low)?; // [elem, elem_copy, low]
+                self.emit(OpCode::GreaterEqual); // [elem, bool1] — copy consumed
+                                                 // JumpIfFalse pops bool1 on both branches, leaving [elem] either way.
                 let first_fail = self.emit_jump(OpCode::JumpIfFalse(0));
                 // True path: [elem]  →  check elem <= high
-                self.literal(high)?;                   // [elem, high]
-                self.emit(OpCode::LessEqual);          // [bool2] — elem consumed
+                self.literal(high)?; // [elem, high]
+                self.emit(OpCode::LessEqual); // [bool2] — elem consumed
                 let end_jump = self.emit_jump(OpCode::Jump(0));
                 // False path: [elem]  →  discard elem, push False
                 self.patch_jump(first_fail);
@@ -1516,66 +1520,130 @@ impl Compiler {
         Ok(())
     }
 
-    /// Compile `begin … rescue … else … end` as an expression: one value on the stack.
-    ///
-    /// On success, if `else_body` is non-empty the Ruby value is the else branch (body’s
-    /// value is discarded).
+    /// Compile exception handling as an expression: one value on the stack.
     fn compile_begin_expr(
         &mut self,
         body: &[Expr],
-        rescue_var: &Option<String>,
-        rescue_body: &[Expr],
+        rescue_clauses: &[RescueClause],
+        else_body: &[Expr],
+        ensure_body: &[Expr],
+    ) -> Result<(), CompileError> {
+        if ensure_body.is_empty() {
+            return self.compile_begin_core(body, rescue_clauses, else_body);
+        }
+
+        let err_slot = self.reserve_local("$ensure_error".to_string());
+        let result_slot = self.reserve_local("$ensure_result".to_string());
+        let raised_slot = self.reserve_local("$ensure_raised".to_string());
+        let ensure_idx = self.emit_begin_rescue(err_slot);
+
+        self.compile_begin_core(body, rescue_clauses, else_body)?;
+        self.emit(OpCode::SetLocal(result_slot));
+        self.emit(OpCode::Pop);
+        self.emit(OpCode::False);
+        self.emit(OpCode::SetLocal(raised_slot));
+        self.emit(OpCode::Pop);
+        self.emit(OpCode::PopRescue);
+        let jump_to_ensure = self.emit_jump(OpCode::Jump(0));
+
+        self.patch_rescue(ensure_idx);
+        self.emit(OpCode::True);
+        self.emit(OpCode::SetLocal(raised_slot));
+        self.emit(OpCode::Pop);
+
+        self.patch_jump(jump_to_ensure);
+        self.stmts(ensure_body)?;
+        self.emit(OpCode::GetLocal(raised_slot));
+        let normal_path = self.emit_jump(OpCode::JumpIfFalse(0));
+        self.emit(OpCode::GetLocal(err_slot));
+        self.emit(OpCode::Raise);
+        self.patch_jump(normal_path);
+        self.emit(OpCode::GetLocal(result_slot));
+
+        Ok(())
+    }
+
+    fn compile_begin_core(
+        &mut self,
+        body: &[Expr],
+        rescue_clauses: &[RescueClause],
         else_body: &[Expr],
     ) -> Result<(), CompileError> {
-        let rescue_var_slot = if let Some(name) = rescue_var {
-            let slot = self.state().locals.len();
-            self.state_mut().locals.push(LocalInfo {
-                name: name.clone(),
-                captured: false,
-            });
-            self.emit(OpCode::Nil);
-            slot
-        } else {
-            usize::MAX
-        };
+        let mut rescue_var_slots = Vec::with_capacity(rescue_clauses.len());
+        let mut named_slots = HashMap::new();
+        for (i, clause) in rescue_clauses.iter().enumerate() {
+            let slot = if let Some(name) = &clause.var {
+                if let Some(slot) = named_slots.get(name) {
+                    *slot
+                } else {
+                    let slot = self.reserve_local(name.clone());
+                    named_slots.insert(name.clone(), slot);
+                    slot
+                }
+            } else if clause.type_ann.is_some() {
+                self.reserve_local(format!("$rescue{}", i))
+            } else {
+                usize::MAX
+            };
+            rescue_var_slots.push(slot);
+        }
 
-        // Track locals before body so we can pad the rescue path later.
         let locals_before_body = self.state().locals.len();
 
-        // Check BEFORE compiling body: is_new_local_assign checks whether the name is already
-        // registered — after body compilation it would be, giving a false negative.
         let body_creates_new_local_result =
             body.last().is_some_and(|e| self.is_new_local_assign(e));
 
-        let begin_idx = self.emit_begin_rescue(rescue_var_slot);
+        let mut begin_indices = vec![0; rescue_clauses.len()];
+        for i in (0..rescue_clauses.len()).rev() {
+            begin_indices[i] = self.emit_begin_rescue(rescue_var_slots[i]);
+        }
 
         self.compile_branch(body)?;
 
         let new_body_locals = self.state().locals.len() - locals_before_body;
 
-        // If body ends with a new-local assign, TOS IS the local's stack slot (no SetLocal
-        // was emitted — the push IS the slot). Push a copy so the begin expression's result
-        // is a fresh value sitting above all the local slots.
         if body_creates_new_local_result {
             let slot = self.state().locals.len() - 1;
             self.emit(OpCode::GetLocal(slot));
         }
 
-        self.emit(OpCode::PopRescue);
+        for _ in rescue_clauses {
+            self.emit(OpCode::PopRescue);
+        }
         let jump_over_rescue = self.emit_jump(OpCode::Jump(0));
 
-        self.patch_rescue(begin_idx);
+        let mut handler_jumps = Vec::new();
+        for (i, clause) in rescue_clauses.iter().enumerate() {
+            self.patch_rescue(begin_indices[i]);
 
-        // On the rescue path the stack is truncated back to pre-body height, losing any
-        // slots that were allocated for body locals. Emit Nils to restore those slots so the
-        // compiler's locals list stays in sync with the runtime stack layout.
-        for _ in 0..new_body_locals {
-            self.emit(OpCode::Nil);
+            for _ in 0..new_body_locals {
+                self.emit(OpCode::Nil);
+            }
+
+            let type_check_failed = if let Some(type_ann) = &clause.type_ann {
+                if let Some(runtime_type) = self.type_expr_runtime(Some(type_ann)) {
+                    self.emit(OpCode::GetLocal(rescue_var_slots[i]));
+                    self.emit(OpCode::RescueMatch(runtime_type));
+                    Some(self.emit_jump(OpCode::JumpIfFalse(0)))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            for _ in i + 1..rescue_clauses.len() {
+                self.emit(OpCode::PopRescue);
+            }
+            self.compile_branch(&clause.body)?;
+            handler_jumps.push(self.emit_jump(OpCode::Jump(0)));
+
+            if let Some(jump) = type_check_failed {
+                self.patch_jump(jump);
+                self.emit(OpCode::GetLocal(rescue_var_slots[i]));
+                self.emit(OpCode::Raise);
+            }
         }
-
-        self.compile_branch(rescue_body)?;
-
-        let jump_over_else = self.emit_jump(OpCode::Jump(0));
 
         self.patch_jump(jump_over_rescue);
 
@@ -1584,9 +1652,21 @@ impl Compiler {
             self.compile_branch(else_body)?;
         }
 
-        self.patch_jump(jump_over_else);
+        for jump in handler_jumps {
+            self.patch_jump(jump);
+        }
 
         Ok(())
+    }
+
+    fn reserve_local(&mut self, name: String) -> usize {
+        let slot = self.state().locals.len();
+        self.state_mut().locals.push(LocalInfo {
+            name,
+            captured: false,
+        });
+        self.emit(OpCode::Nil);
+        slot
     }
 
     fn emit_begin_rescue(&mut self, rescue_var_slot: usize) -> usize {
@@ -1739,8 +1819,7 @@ impl Compiler {
                 .iter()
                 .map(|p| {
                     p.type_ann.as_ref().and_then(|te| {
-                        let erased =
-                            erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
+                        let erased = erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
                         self.type_expr_runtime(Some(&erased))
                     })
                 })
@@ -1783,8 +1862,7 @@ impl Compiler {
                 .iter()
                 .map(|p| {
                     p.type_ann.as_ref().and_then(|te| {
-                        let erased =
-                            erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
+                        let erased = erase_type_vars(&self.resolve_type_expr(te), &all_tvars);
                         self.type_expr_runtime(Some(&erased))
                     })
                 })
