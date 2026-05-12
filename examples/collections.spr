@@ -9,7 +9,7 @@ print "first:  #{numbers.first}"
 print "last:   #{numbers.last}"
 
 doubled = numbers.map { |n| n * 2 }
-doubled.each { |n| print(n) }
+doubled.each { |n| print n }
 
 evens = numbers.select { |n| n % 2 == 0 }
 print "even count: #{evens.size}"
@@ -24,7 +24,7 @@ print "max: #{sorted.last}"
 unique = numbers.uniq
 print "unique: #{unique.size} values"
 
-numbers.each_with_index { |n, i| print("  [#{i}] = #{n}") }
+numbers.each_with_index { |n, i| print "  [#{i}] = #{n}" }
 
 print "any > 8?  #{numbers.any? { |n| n > 8 }}"
 print "all > 0?  #{numbers.all? { |n| n > 0 }}"
@@ -46,7 +46,7 @@ print "size: #{scores.size}"
 print "has alice? #{scores.has_key?("alice")}"
 print "has dave?  #{scores.has_key?("dave")}"
 
-scores.each { |name, score| print("  #{name}: #{score}") }
+scores.each { |name, score| print "  #{name}: #{score}" }
 
 passing = scores.select { |name, score| score >= 90 }
 print "passing count: #{passing.size}"
@@ -58,7 +58,7 @@ print "total students: #{all_scores.size}"
 # ── Ranges ─────────────────────────────────────────────────────────────────────
 
 print "Counting:"
-(1..5).each { |i| print(i) }
+(1..5).each { |i| print i }
 
 print "includes 3? #{(1..5).include?(3)}"
 print "includes 6? #{(1..5).include?(6)}"
