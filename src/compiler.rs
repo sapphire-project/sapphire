@@ -385,12 +385,6 @@ impl Compiler {
                 }
             }
 
-            Expr::Print(inner) => {
-                self.expr(inner)?;
-                self.emit(OpCode::Print);
-                self.emit(OpCode::Pop);
-            }
-
             Expr::Raise(expr) => {
                 self.expr(expr)?;
                 self.emit(OpCode::Raise);
@@ -508,12 +502,6 @@ impl Compiler {
     fn expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
         match expr {
             Expr::Return(_) | Expr::Break(_) | Expr::Next(_) | Expr::Raise(_) => self.stmt(expr),
-
-            Expr::Print(inner) => {
-                self.expr(inner)?;
-                self.emit(OpCode::Print);
-                Ok(())
-            }
 
             Expr::While { .. } | Expr::MultiAssign { .. } | Expr::Import { .. } => {
                 self.stmt(expr)?;
@@ -906,8 +894,11 @@ impl Compiler {
                 self.emit(OpCode::SuperInvoke(name_idx, arg_count));
                 Ok(())
             }
-
-
+            Expr::Print(inner) => {
+                self.expr(inner)?;
+                self.emit(OpCode::Print);
+                Ok(())
+            }
 
             Expr::Class {
                 name,

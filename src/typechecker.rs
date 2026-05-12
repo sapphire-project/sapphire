@@ -508,6 +508,7 @@ impl TypeChecker {
                     },
                 );
             }
+            Expr::Print(inner) => self.check_expr(inner),
             Expr::Class {
                 name,
                 type_params,
@@ -690,7 +691,6 @@ impl TypeChecker {
                 }
                 self.pop_scope();
             }
-            Expr::Print(inner) => self.check_expr(inner),
             Expr::Raise(inner) => self.check_expr(inner),
             Expr::Break(inner) | Expr::Next(inner) => self.check_expr(inner),
             Expr::MultiAssign { names, values } => {
@@ -1420,6 +1420,7 @@ impl TypeChecker {
                 _ => None,
             },
 
+            Expr::Print(inner) => self.infer_type(inner),
             Expr::If {
                 then_branch,
                 else_branch,
@@ -1452,7 +1453,6 @@ impl TypeChecker {
             Expr::Return(inner) => self.infer_type(inner),
             Expr::While { .. } => Some(TypeExpr::Named("Nil".into())),
             Expr::MultiAssign { values, .. } => values.last().and_then(|v| self.infer_type(v)),
-            Expr::Print(inner) => self.infer_type(inner),
             Expr::Break(_) | Expr::Next(_) | Expr::Raise(_) => None,
             Expr::Lambda { .. } => None,
             Expr::Class { name, .. } => Some(TypeExpr::Named(name.clone())),

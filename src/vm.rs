@@ -3702,8 +3702,6 @@ impl Vm {
                     self.frames.last_mut().unwrap().rescues.pop();
                 }
 
-
-
                 OpCode::Print => {
                     let val = self.pop()?;
                     let s = self.format_value(&val);

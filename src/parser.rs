@@ -2395,6 +2395,17 @@ mod tests {
         assert!(Parser::new(tokens).parse().is_err());
     }
 
+    #[test]
+    fn test_print_statement() {
+        let tokens = Lexer::new("print 42").scan_tokens();
+        let mut exprs = Parser::new(tokens).parse().unwrap();
+        match exprs.remove(0) {
+            Expr::Print(inner) => {
+                assert!(matches!(*inner, Expr::Literal(Value::Int(42))));
+            }
+            other => panic!("expected print expr, got {:?}", other),
+        }
+    }
 
     #[test]
     fn test_multiple_statements() {
