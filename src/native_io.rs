@@ -2,12 +2,21 @@ use std::io::{BufRead, Write};
 
 use crate::gc::{GcHeap, GcRef};
 use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
-use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
     define_native_class_method(heap, class_ref, "puts", 1, io_puts);
     define_native_class_method(heap, class_ref, "print", 1, io_print);
     define_native_class_method(heap, class_ref, "gets", 0, io_gets);
+}
+
+fn format_arg(method: &str, args: &[VmValue], line: u32) -> Result<String, VmError> {
+    match args {
+        [v] => Ok(format!("{v}")),
+        _ => Err(VmError::TypeError {
+            message: format!("IO.{method} expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
 }
 
 fn io_puts(
@@ -16,20 +25,8 @@ fn io_puts(
     args: &[VmValue],
     line: u32,
 ) -> Result<VmValue, VmError> {
-    match args {
-        [Str(s)] => {
-            println!("{s}");
-            Ok(VmValue::Nil)
-        }
-        [_] => Err(VmError::TypeError {
-            message: "IO.puts: argument must be a string".to_string(),
-            line,
-        }),
-        _ => Err(VmError::TypeError {
-            message: format!("IO.puts expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
+    println!("{}", format_arg("puts", args, line)?);
+    Ok(VmValue::Nil)
 }
 
 fn io_print(
@@ -38,21 +35,9 @@ fn io_print(
     args: &[VmValue],
     line: u32,
 ) -> Result<VmValue, VmError> {
-    match args {
-        [Str(s)] => {
-            print!("{s}");
-            std::io::stdout().flush().ok();
-            Ok(VmValue::Nil)
-        }
-        [_] => Err(VmError::TypeError {
-            message: "IO.print: argument must be a string".to_string(),
-            line,
-        }),
-        _ => Err(VmError::TypeError {
-            message: format!("IO.print expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
+    print!("{}", format_arg("print", args, line)?);
+    std::io::stdout().flush().ok();
+    Ok(VmValue::Nil)
 }
 
 fn io_gets(
@@ -77,8 +62,8 @@ fn io_gets(
                     buf.pop();
                 }
             }
-            Ok(Str(buf))
+            Ok(VmValue::Str(buf))
         }
-        Err(e) => Err(VmError::Raised(Str(format!("IO.gets failed: {e}")))),
+        Err(e) => Err(VmError::Raised(VmValue::Str(format!("IO.gets failed: {e}")))),
     }
 }

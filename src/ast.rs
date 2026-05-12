@@ -146,8 +146,6 @@ pub enum Expr {
         then_branch: Vec<Expr>,
         else_branch: Option<Vec<Expr>>,
     },
-    /// `print expr` — evaluates `expr`, prints, value is the printed value.
-    Print(Box<Expr>),
     /// `class Name ...` — defines a class; value is the class object.
     Class {
         name: String,

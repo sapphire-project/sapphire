@@ -719,6 +719,25 @@ impl Compiler {
                         }
                         return Ok(());
                     }
+                    // print(val) without an explicit receiver → IO.puts(val)
+                    if is_unresolved && name == "print" {
+                        self.emit_maybe_lexical_or_global("IO");
+                        let argc = args.len();
+                        for arg in args {
+                            self.expr(&arg.value)?;
+                        }
+                        let ni = self
+                            .state_mut()
+                            .chunk
+                            .add_constant(Constant::Str("puts".to_string()));
+                        if let Some(blk) = block {
+                            self.compile_block(blk)?;
+                            self.emit(OpCode::InvokeWithBlock(ni, argc));
+                        } else {
+                            self.emit(OpCode::Invoke(ni, argc));
+                        }
+                        return Ok(());
+                    }
                 }
                 // Plain function call (with or without block)
                 self.expr(callee)?;
@@ -895,11 +914,7 @@ impl Compiler {
                 Ok(())
             }
 
-            Expr::Print(inner) => {
-                self.expr(inner)?;
-                self.emit(OpCode::Print);
-                Ok(())
-            }
+
 
             Expr::Class {
                 name,

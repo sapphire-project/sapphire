@@ -743,13 +743,13 @@ fn or_returns_rhs_when_falsy() {
 }
 
 #[test]
-fn print_does_not_change_result_when_not_last_statement() {
-    assert_eq!(eval("print 42\n99"), VmValue::Int(99));
+fn io_puts_does_not_change_result_when_not_last_statement() {
+    assert_eq!(eval_with_stdlib("IO.puts(42)\n99"), VmValue::Int(99));
 }
 
 #[test]
-fn implicit_return_last_print_passes_printed_value() {
-    assert_eq!(eval("def f() { print 42 }\nf()"), VmValue::Int(42));
+fn io_puts_returns_nil() {
+    assert_eq!(eval_with_stdlib("def f() { IO.puts(42) }\nf()"), VmValue::Nil);
 }
 
 #[test]

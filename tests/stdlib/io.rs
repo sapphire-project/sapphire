@@ -12,16 +12,21 @@ fn print_returns_nil() {
 }
 
 #[test]
-fn puts_type_error_on_non_string() {
-    assert!(matches!(eval_err("IO.puts(42)"), VmError::TypeError { .. }));
+fn puts_coerces_int() {
+    assert_eq!(eval("IO.puts(42)"), VmValue::Nil);
 }
 
 #[test]
-fn print_type_error_on_non_string() {
-    assert!(matches!(eval_err("IO.print(42)"), VmError::TypeError { .. }));
+fn puts_coerces_bool() {
+    assert_eq!(eval("IO.puts(true)"), VmValue::Nil);
 }
 
 #[test]
-fn gets_type_error_on_wrong_arity() {
+fn puts_coerces_nil_value() {
+    assert_eq!(eval("IO.puts(nil)"), VmValue::Nil);
+}
+
+#[test]
+fn gets_wrong_arity_is_type_error() {
     assert!(matches!(eval_err(r#"IO.gets("extra")"#), VmError::TypeError { .. }));
 }

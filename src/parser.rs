@@ -423,10 +423,7 @@ impl Parser {
         if self.check(&TokenKind::Begin) {
             return self.begin_expr();
         }
-        if self.check(&TokenKind::Print) {
-            self.advance();
-            return Ok(Expr::Print(Box::new(self.logical()?)));
-        }
+
         if self.check(&TokenKind::Type) {
             self.advance(); // consume 'type'
             let name = match self.peek().kind.clone() {
@@ -1718,7 +1715,6 @@ impl Parser {
                     // Allow keywords as method/field names after '.' (e.g. self.class, r.match(...))
                     TokenKind::Class => { self.advance(); "class".to_string() }
                     TokenKind::Match => { self.advance(); "match".to_string() }
-                    TokenKind::Print => { self.advance(); "print".to_string() }
                     _ => {
                         return Err(SapphireError::ParseError {
                             message: "expected field or method name after '.'".into(),
@@ -2395,17 +2391,6 @@ mod tests {
         assert!(Parser::new(tokens).parse().is_err());
     }
 
-    #[test]
-    fn test_print_statement() {
-        let tokens = Lexer::new("print 42").scan_tokens();
-        let mut exprs = Parser::new(tokens).parse().unwrap();
-        match exprs.remove(0) {
-            Expr::Print(inner) => {
-                assert!(matches!(*inner, Expr::Literal(Value::Int(42))));
-            }
-            other => panic!("expected print expr, got {:?}", other),
-        }
-    }
 
     #[test]
     fn test_multiple_statements() {

@@ -27,7 +27,7 @@ module Enumerable {
 
   # Yields each element with its zero-based index.
   #
-  #   ["a", "b"].each_with_index { |item, i| print "#{i}: #{item}" }
+  #   ["a", "b"].each_with_index { |item, i| print("#{i}: #{item}") }
   #
   def each_with_index {
     i = 0

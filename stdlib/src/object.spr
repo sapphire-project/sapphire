@@ -15,4 +15,10 @@ class Object {
   #   o.to_s   # "#<Object>"
   #
   def to_s { "#<#{self.class.name}>" }
+
+  # Writes val to stdout with a trailing newline. Equivalent to IO.puts.
+  #
+  #   print("hello")   # hello
+  #
+  def print(val) { IO.puts(val) }
 }
