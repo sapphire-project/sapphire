@@ -8,7 +8,7 @@ module Enumerable {
   #
   #   [1, 2, 3].all? { |x| x > 0 }   # true
   #
-  def all?() {
+  def all? {
     all_match = true
     each { |x| if all_match && !yield(x) { all_match = false } }
     all_match
@@ -19,7 +19,7 @@ module Enumerable {
   #
   #   [1, 2, 3].any? { |x| x > 2 }   # true
   #
-  def any?() {
+  def any? {
     found = false
     each { |x| if !found && yield(x) { found = true } }
     found
@@ -52,7 +52,7 @@ module Enumerable {
   #
   #   [1, 2, 3].none? { |x| x > 9 }   # true
   #
-  def none?() {
+  def none? {
     no_match = true
     each { |x| if no_match && yield(x) { no_match = false } }
     no_match

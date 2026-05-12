@@ -210,7 +210,7 @@ print nums[-1]   # 6
 print nums.size   # 8
 
 nums.append(7)
-nums.pop()       # remove and return last
+nums.pop       # remove and return last
 ```
 
 The core iteration methods let you work with lists without manual loops:
@@ -271,18 +271,18 @@ class Point {
   attr x: Int
   attr y: Int
 
-  def distance_sq() -> Int {
+  def distance_sq -> Int {
     x * x + y * y
   }
 
-  def to_s() -> Str {
+  def to_s -> Str {
     "(#{x}, #{y})"
   }
 }
 
 p = Point.new(x: 3, y: 4)
-print p.to_s()            # (3, 4)
-print p.distance_sq()     # 25
+print p.to_s            # (3, 4)
+print p.distance_sq     # 25
 ```
 
 Fields can have default values:
@@ -305,11 +305,11 @@ Reading uses the bare field name; writing requires `self.field =`:
 class Counter {
   attr count = 0
 
-  def increment() {
+  def increment {
     self.count = count + 1
   }
 
-  def reset() {
+  def reset {
     self.count = 0
   }
 }
@@ -358,7 +358,7 @@ class Point {
   attr y: Int
 
   self {
-    def origin() {
+    def origin {
       self.new(x: 0, y: 0)
     }
   }
@@ -376,23 +376,23 @@ Use `class Child < Parent` to inherit from a parent class. Subclasses inherit al
 class Animal {
   attr name: Str
 
-  def speak() {
+  def speak {
     print "..."
   }
 
-  def greet() {
+  def greet {
     print "I am #{name}"
   }
 }
 
 class Dog < Animal {
-  def speak() {
+  def speak {
     print "Woof!"
   }
 }
 
 class Cat < Animal {
-  def speak() {
+  def speak {
     print "Meow!"
   }
 }
@@ -400,9 +400,9 @@ class Cat < Animal {
 d = Dog.new(name: "Rex")
 c = Cat.new(name: "Whiskers")
 
-d.speak()   # Woof!
-d.greet()   # I am Rex  (inherited from Animal)
-c.speak()   # Meow!
+d.speak   # Woof!
+d.greet   # I am Rex  (inherited from Animal)
+c.speak   # Meow!
 ```
 
 Use bare `super` or `super(...)` to call the superclass method with the same name (like Ruby):
@@ -411,7 +411,7 @@ Use bare `super` or `super(...)` to call the superclass method with the same nam
 class Animal {
   attr name: Str
 
-  def describe() -> Str {
+  def describe -> Str {
     name
   }
 }
@@ -419,13 +419,13 @@ class Animal {
 class Dog < Animal {
   attr breed: Str
 
-  def describe() -> Str {
-    super() + " (#{breed})"
+  def describe -> Str {
+    super + " (#{breed})"
   }
 }
 
 d = Dog.new(name: "Rex", breed: "Lab")
-print d.describe()   # Rex (Lab)
+print d.describe   # Rex (Lab)
 ```
 
 Every class implicitly inherits from `Object`. `is_a?(ClassName)` checks the class hierarchy:
@@ -526,7 +526,7 @@ class Point {
     ((dx * dx) + (dy * dy)).sqrt()
   }
 
-  def to_s() -> Str {
+  def to_s -> Str {
     "(#{self.x}, #{self.y})"
   }
 }
@@ -541,7 +541,7 @@ import "./geometry/point"
 a = Point.new(x: 0.0, y: 0.0)
 b = Point.new(x: 3.0, y: 4.0)
 
-print a.to_s()              # (0.0, 4.0)
+print a.to_s              # (0.0, 4.0)
 print a.distance_to(b)      # 5.0
 ```
 
@@ -555,7 +555,7 @@ class Circle {
   attr center: Point
   attr radius: Float
 
-  def area() -> Float {
+  def area -> Float {
     3.14159 * self.radius * self.radius
   }
 }
@@ -569,11 +569,11 @@ Here is a small program that uses classes, inheritance, type annotations, blocks
 
 ```ruby
 class Shape {
-  def area() -> Float {
-    raise "area() not implemented"
+  def area -> Float {
+    raise "area not implemented"
   }
 
-  def describe() -> Str {
+  def describe -> Str {
     "Shape with area #{self.area()}"
   }
 }
@@ -582,11 +582,11 @@ class Rectangle < Shape {
   attr width: Float
   attr height: Float
 
-  def area() -> Float {
+  def area -> Float {
     width * height
   }
 
-  def describe() -> Str {
+  def describe -> Str {
     "Rectangle #{width}x#{height}, area=#{self.area()}"
   }
 }
@@ -594,21 +594,21 @@ class Rectangle < Shape {
 class Circle < Shape {
   attr radius: Float
 
-  def area() -> Float {
+  def area -> Float {
     3.14159 * radius * radius
   }
 
-  def describe() -> Str {
+  def describe -> Str {
     "Circle r=#{radius}, area=#{self.area()}"
   }
 }
 
 def summarise(shapes) {
-  shapes.each { |s| print s.describe() }
+  shapes.each { |s| print s.describe }
 
-  total = shapes.reduce(0.0) { |acc, s| acc + s.area() }
+  total = shapes.reduce(0.0) { |acc, s| acc + s.area }
   largest = shapes.reduce(shapes[0]) { |best, s|
-    if s.area() > best.area() { s } else { best }
+    if s.area > best.area { s } else { best }
   }
 
   print "Total area:   #{total}"

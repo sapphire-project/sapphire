@@ -392,7 +392,7 @@ First public preview of the Sapphire language.
 - Top-level `def` desugars into `Object` methods (Ruby-style)
 
 **Blocks**
-- Block syntax: `list.each() { |x| print x }`
+- Block syntax: `list.each { |x| print x }`
 - `yield` to call a passed block
 - `next` to return a value from the current block iteration
 - `break` to exit the block's caller early

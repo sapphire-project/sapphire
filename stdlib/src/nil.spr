@@ -4,17 +4,13 @@
 class Nil {
   # Returns true. nil is the only value that answers true to nil?.
   #
-  #   nil.nil?()   # true
+  #   nil.nil?   # true
   #
-  def nil?() {
-    true
-  }
+  def nil? { true }
 
   # Returns the string "nil" for display.
   #
   #   nil.to_s   # "nil"
   #
-  def to_s {
-    "nil"
-  }
+  def to_s { "nil" }
 }

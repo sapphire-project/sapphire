@@ -5,18 +5,14 @@ class Object {
   # Returns false. Ordinary object instances are never nil.
   #
   #   o = Object.new
-  #   o.nil?()   # false
+  #   o.nil? # false
   #
-  def nil?() {
-    false
-  }
+  def nil? { false }
 
   # Returns a short debug-style string including the receiver's class name.
   #
   #   o = Object.new
   #   o.to_s   # "#<Object>"
   #
-  def to_s {
-    "#<#{self.class.name}>"
-  }
+  def to_s { "#<#{self.class.name}>" }
 }
