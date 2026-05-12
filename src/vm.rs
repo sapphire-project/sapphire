@@ -798,6 +798,14 @@ impl Vm {
         }
     }
 
+    fn rescue_type_matches(&self, val: &VmValue, expected: &RuntimeType) -> bool {
+        match expected {
+            RuntimeType::Named(name) => self.is_instance_of(val, name),
+            RuntimeType::Literal(lit) => vm_value_matches_literal(val, lit),
+            RuntimeType::Union(arms) => arms.iter().any(|arm| self.rescue_type_matches(val, arm)),
+        }
+    }
+
     fn alloc_list(&mut self, v: Vec<VmValue>) -> VmValue {
         self.maybe_gc();
         VmValue::List(self.heap.alloc(HeapObject::List(v)))
@@ -3700,6 +3708,12 @@ impl Vm {
 
                 OpCode::PopRescue => {
                     self.frames.last_mut().unwrap().rescues.pop();
+                }
+
+                OpCode::RescueMatch(expected) => {
+                    let val = self.pop()?;
+                    let matches = self.rescue_type_matches(&val, &expected);
+                    self.stack.push(VmValue::Bool(matches));
                 }
 
                 OpCode::Print => {

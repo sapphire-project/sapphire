@@ -71,6 +71,13 @@ pub struct MethodDef {
 }
 
 #[derive(Debug, Clone)]
+pub struct RescueClause {
+    pub var: Option<String>,
+    pub type_ann: Option<TypeExpr>,
+    pub body: Vec<Expr>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CallArg {
     pub name: Option<String>,
     pub value: Expr,
@@ -183,12 +190,12 @@ pub enum Expr {
         return_type: Option<TypeExpr>,
         body: Vec<Expr>,
     },
-    /// `begin … rescue … else … end` — value follows Ruby (last expression on taken path).
+    /// `try { ... } rescue ... else ... ensure ...` — value follows Ruby/Crystal.
     Begin {
         body: Vec<Expr>,
-        rescue_var: Option<String>,
-        rescue_body: Vec<Expr>,
+        rescue_clauses: Vec<RescueClause>,
         else_body: Vec<Expr>,
+        ensure_body: Vec<Expr>,
     },
     /// `while cond { ... }` — value is `nil` when the loop exits normally (Ruby).
     While {

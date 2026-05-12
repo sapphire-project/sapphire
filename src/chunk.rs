@@ -182,6 +182,8 @@ pub enum OpCode {
     },
     /// Remove the most recently registered rescue handler (normal exit from body).
     PopRescue,
+    /// Pop a value and push whether it matches the rescue type.
+    RescueMatch(RuntimeType),
 
     // Native helpers used by pre-built stdlib functions
     /// Pop a List/Map/Str/Range and push its size as Int.
