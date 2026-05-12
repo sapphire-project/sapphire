@@ -29,18 +29,18 @@ def first_or_default[T](items: List[T], default: T) -> T {
 }
 
 b = Box.new(value: 42)
-print(b.get)
-print(b.to_s)
+print b.get
+print b.to_s
 
 s = Box.new(value: "hello")
-print(s.get)
+print s.get
 
 p = Pair.new(first: 1, second: "one")
-print(p.first)
-print(p.second)
+print p.first
+print p.second
 
-print(identity(99))
-print(identity("sapphire"))
+print identity(99)
+print identity("sapphire")
 
-print(first_or_default([], 0))
-print(first_or_default([10, 20, 30], 0))
+print first_or_default([], 0)
+print first_or_default([10, 20, 30], 0)
