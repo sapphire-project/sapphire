@@ -40,6 +40,12 @@ pub struct Parser {
     allow_inline_rescue: bool,
 }
 
+struct ExceptionParts {
+    rescue_clauses: Vec<RescueClause>,
+    else_body: Vec<Expr>,
+    ensure_body: Vec<Expr>,
+}
+
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {
@@ -1408,8 +1414,7 @@ impl Parser {
             }
             body.push(self.statement_without_inline_rescue()?);
         }
-        let (rescue_clauses, else_body, ensure_body) =
-            self.parse_legacy_exception_clauses(&TokenKind::End)?;
+        let parts = self.parse_legacy_exception_clauses(&TokenKind::End)?;
         if !self.check(&TokenKind::End) {
             return Err(SapphireError::ParseError {
                 message: "expected 'end' to close 'begin'".into(),
@@ -1420,9 +1425,9 @@ impl Parser {
         self.advance(); // consume 'end'
         Ok(Expr::Begin {
             body,
-            rescue_clauses,
-            else_body,
-            ensure_body,
+            rescue_clauses: parts.rescue_clauses,
+            else_body: parts.else_body,
+            ensure_body: parts.ensure_body,
         })
     }
 
@@ -1472,8 +1477,7 @@ impl Parser {
             || self.check(&TokenKind::Else)
             || self.check(&TokenKind::Ensure)
         {
-            let (rescue_clauses, else_body, ensure_body) =
-                self.parse_legacy_exception_clauses(&TokenKind::RightBrace)?;
+            let parts = self.parse_legacy_exception_clauses(&TokenKind::RightBrace)?;
             if !self.check(&TokenKind::RightBrace) {
                 return Err(SapphireError::ParseError {
                     message: "expected '}'".into(),
@@ -1484,9 +1488,9 @@ impl Parser {
             self.advance(); // consume '}'
             Ok(vec![Expr::Begin {
                 body,
-                rescue_clauses,
-                else_body,
-                ensure_body,
+                rescue_clauses: parts.rescue_clauses,
+                else_body: parts.else_body,
+                ensure_body: parts.ensure_body,
             }])
         } else {
             if !self.check(&TokenKind::RightBrace) {
@@ -1509,18 +1513,16 @@ impl Parser {
     }
 
     fn wrap_exception_suffix(&mut self, body: Vec<Expr>) -> Result<Expr, SapphireError> {
-        let (rescue_clauses, else_body, ensure_body) = self.parse_braced_exception_suffix()?;
+        let parts = self.parse_braced_exception_suffix()?;
         Ok(Expr::Begin {
             body,
-            rescue_clauses,
-            else_body,
-            ensure_body,
+            rescue_clauses: parts.rescue_clauses,
+            else_body: parts.else_body,
+            ensure_body: parts.ensure_body,
         })
     }
 
-    fn parse_braced_exception_suffix(
-        &mut self,
-    ) -> Result<(Vec<RescueClause>, Vec<Expr>, Vec<Expr>), SapphireError> {
+    fn parse_braced_exception_suffix(&mut self) -> Result<ExceptionParts, SapphireError> {
         let mut rescue_clauses = Vec::new();
         while self.check(&TokenKind::Rescue) {
             let (var, type_ann) = self.parse_rescue_header()?;
@@ -1543,13 +1545,17 @@ impl Parser {
         } else {
             Vec::new()
         };
-        Ok((rescue_clauses, else_body, ensure_body))
+        Ok(ExceptionParts {
+            rescue_clauses,
+            else_body,
+            ensure_body,
+        })
     }
 
     fn parse_legacy_exception_clauses(
         &mut self,
         end: &TokenKind,
-    ) -> Result<(Vec<RescueClause>, Vec<Expr>, Vec<Expr>), SapphireError> {
+    ) -> Result<ExceptionParts, SapphireError> {
         let mut rescue_clauses = Vec::new();
         while self.check(&TokenKind::Rescue) {
             let (var, type_ann) = self.parse_rescue_header()?;
@@ -1600,7 +1606,11 @@ impl Parser {
         } else {
             Vec::new()
         };
-        Ok((rescue_clauses, else_body, ensure_body))
+        Ok(ExceptionParts {
+            rescue_clauses,
+            else_body,
+            ensure_body,
+        })
     }
 
     fn parse_rescue_header(&mut self) -> Result<(Option<String>, Option<TypeExpr>), SapphireError> {
