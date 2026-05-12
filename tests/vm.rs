@@ -744,12 +744,12 @@ fn or_returns_rhs_when_falsy() {
 
 #[test]
 fn print_does_not_change_result_when_not_last_statement() {
-    assert_eq!(eval("print(42)\n99"), VmValue::Int(99));
+    assert_eq!(eval("print 42\n99"), VmValue::Int(99));
 }
 
 #[test]
 fn implicit_return_last_print_passes_printed_value() {
-    assert_eq!(eval("def f() { print(42) }\nf()"), VmValue::Int(42));
+    assert_eq!(eval("def f() { print 42 }\nf()"), VmValue::Int(42));
 }
 
 #[test]
