@@ -310,6 +310,21 @@ impl Parser {
         !self.is_at_end() && &self.peek().kind == kind
     }
 
+    fn rescue_starts_braced_clause(&self) -> bool {
+        let mut i = self.current + 1;
+        while let Some(Token {
+            kind: TokenKind::Newline | TokenKind::Semicolon,
+            ..
+        }) = self.tokens.get(i)
+        {
+            i += 1;
+        }
+        matches!(
+            self.tokens.get(i).map(|t| &t.kind),
+            Some(TokenKind::LeftBrace)
+        )
+    }
+
     fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
             self.current += 1;
@@ -352,11 +367,14 @@ impl Parser {
     fn statement(&mut self) -> Result<Expr, SapphireError> {
         let mut stmt = self.statement_inner()?;
         if self.check(&TokenKind::Rescue) || self.check(&TokenKind::Ensure) {
-            let is_while_suffix = matches!(stmt, Expr::While { .. });
-            stmt = self.wrap_exception_suffix(vec![stmt])?;
-            if is_while_suffix {
-                Self::rewrite_suffix_rescue_breaks(&mut stmt);
+            if matches!(stmt, Expr::If { .. } | Expr::While { .. }) {
+                return Err(SapphireError::ParseError {
+                    message: "use 'try { ... }' to rescue if/while bodies".into(),
+                    line: self.peek().line,
+                    column: self.peek().column,
+                });
             }
+            stmt = self.wrap_exception_suffix(vec![stmt])?;
         }
         // Trailing conditional: `expr if condition`
         if self.check(&TokenKind::If) {
@@ -371,53 +389,6 @@ impl Parser {
             });
         }
         Ok(stmt)
-    }
-
-    fn rewrite_suffix_rescue_breaks(expr: &mut Expr) {
-        if let Expr::Begin { rescue_clauses, .. } = expr {
-            for clause in rescue_clauses {
-                Self::rewrite_breaks_as_nil(&mut clause.body);
-            }
-        }
-    }
-
-    fn rewrite_breaks_as_nil(exprs: &mut [Expr]) {
-        for expr in exprs {
-            match expr {
-                Expr::Break(_) => *expr = Expr::Literal(Value::Nil),
-                Expr::If {
-                    then_branch,
-                    else_branch,
-                    ..
-                } => {
-                    Self::rewrite_breaks_as_nil(then_branch);
-                    if let Some(else_branch) = else_branch {
-                        Self::rewrite_breaks_as_nil(else_branch);
-                    }
-                }
-                Expr::Begin {
-                    body,
-                    rescue_clauses,
-                    else_body,
-                    ensure_body,
-                } => {
-                    Self::rewrite_breaks_as_nil(body);
-                    for clause in rescue_clauses {
-                        Self::rewrite_breaks_as_nil(&mut clause.body);
-                    }
-                    Self::rewrite_breaks_as_nil(else_body);
-                    Self::rewrite_breaks_as_nil(ensure_body);
-                }
-                Expr::While { body, .. } => Self::rewrite_breaks_as_nil(body),
-                Expr::Match { arms, .. } => {
-                    for arm in arms {
-                        Self::rewrite_breaks_as_nil(&mut arm.body);
-                    }
-                }
-                Expr::Lambda { .. } | Expr::Function { .. } | Expr::Class { .. } => {}
-                _ => {}
-            }
-        }
     }
 
     fn statement_without_inline_rescue(&mut self) -> Result<Expr, SapphireError> {
@@ -1733,7 +1704,10 @@ impl Parser {
                 right: Box::new(right),
             };
         }
-        if self.allow_inline_rescue && self.check(&TokenKind::Rescue) {
+        if self.allow_inline_rescue
+            && self.check(&TokenKind::Rescue)
+            && !self.rescue_starts_braced_clause()
+        {
             self.advance();
             let fallback = self.logical()?;
             left = Expr::Begin {

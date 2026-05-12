@@ -33,6 +33,11 @@ fn eval_err(src: &str) -> VmError {
         .expect_err("expected vm error")
 }
 
+fn parse_err(src: &str) -> SapphireError {
+    let tokens = Lexer::new(src).scan_tokens();
+    Parser::new(tokens).parse().expect_err("expected parse error")
+}
+
 #[test]
 fn int_literal() {
     assert_eq!(eval("42"), VmValue::Int(42));
@@ -1635,33 +1640,44 @@ risky(5) + risky(-1)"#;
 }
 
 #[test]
-fn block_suffix_rescue_and_ensure() {
+fn try_inside_while_rescue_and_ensure() {
     let src = r#"i = 0
 while i < 3 {
-  i = i + 1
-  if i == 2 { raise "bad" }
-} rescue e {
-  i = 10
-} ensure {
-  i = i + 1
+  try {
+    i = i + 1
+    if i == 1 { raise "bad" }
+  } rescue e {
+    i = 10
+  } ensure {
+    i = i + 1
+  }
 }
 i"#;
     assert_eq!(eval(src), VmValue::Int(11));
 }
 
 #[test]
-fn block_suffix_rescue_allows_break() {
-    let src = r#"i = 0
-while i < 3 {
-  i = i + 1
-  if i == 2 { raise "bad" }
-} rescue e {
-  break
-} ensure {
-  i = i + 10
+fn call_with_block_suffix_rescue() {
+    let src = r#"def with_block() {
+  yield()
 }
-i"#;
-    assert_eq!(eval(src), VmValue::Int(12));
+with_block { raise "bad" } rescue { 7 }"#;
+    assert_eq!(eval(src), VmValue::Int(7));
+}
+
+#[test]
+fn if_while_suffix_rescue_parse_error() {
+    for src in [
+        r#"if true { 1 } rescue { 2 }"#,
+        r#"while false { 1 } rescue { 2 }"#,
+    ] {
+        let err = parse_err(src);
+        assert!(matches!(
+            err,
+            SapphireError::ParseError { ref message, .. }
+                if message == "use 'try { ... }' to rescue if/while bodies"
+        ));
+    }
 }
 
 #[test]
