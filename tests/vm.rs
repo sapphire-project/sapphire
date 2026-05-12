@@ -121,10 +121,14 @@ fn shift_right() {
 
 #[test]
 fn bitwise_operator_precedence() {
+    // shifts bind tighter than comparisons
     assert_eq!(eval("1 << 3 == 8"), VmValue::Bool(true));
-    assert_eq!(eval("5 | 3 & 6"), VmValue::Int(7));
-    assert_eq!(eval("5 | 3 ^ 6"), VmValue::Int(5));
-    assert_eq!(eval("3 + 1 & 6"), VmValue::Int(4));
+    // & binds tighter than |
+    assert_eq!(eval("5 | 3 & 6"), VmValue::Int(7)); // 5 | (3 & 6) = 5 | 2 = 7
+    // ^ between & and |
+    assert_eq!(eval("5 | 3 ^ 6"), VmValue::Int(5)); // 5 | (3 ^ 6) = 5 | 5 = 5
+    // arithmetic binds tighter than bitwise
+    assert_eq!(eval("3 + 1 & 6"), VmValue::Int(4)); // (3+1) & 6 = 4 & 6 = 4
 }
 
 #[test]
