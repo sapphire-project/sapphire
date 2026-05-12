@@ -827,17 +827,22 @@ impl TypeChecker {
             }
             Expr::Begin {
                 body,
-                rescue_body,
+                rescue_clauses,
                 else_body,
-                ..
+                ensure_body,
             } => {
                 for s in body {
                     self.check_expr(s);
                 }
-                for s in rescue_body {
-                    self.check_expr(s);
+                for clause in rescue_clauses {
+                    for s in &clause.body {
+                        self.check_expr(s);
+                    }
                 }
                 for s in else_body {
+                    self.check_expr(s);
+                }
+                for s in ensure_body {
                     self.check_expr(s);
                 }
             }
@@ -1440,9 +1445,12 @@ impl TypeChecker {
                 }
             }
             Expr::Begin {
-                body, rescue_body, ..
+                body,
+                rescue_clauses,
+                ensure_body,
+                ..
             } => {
-                if rescue_body.is_empty() {
+                if rescue_clauses.is_empty() && ensure_body.is_empty() {
                     body.last().and_then(|e| self.infer_type(e))
                 } else {
                     None
@@ -1561,7 +1569,11 @@ impl TypeChecker {
                     .map(|a| a.body.last().and_then(|e| self.infer_type(e)))
                     .collect();
                 let first = types.first().and_then(|t| t.clone());
-                if types.iter().all(|t| t == &first) { first } else { None }
+                if types.iter().all(|t| t == &first) {
+                    first
+                } else {
+                    None
+                }
             }
             _ => None,
         }
@@ -1601,9 +1613,7 @@ fn types_compatible(actual: &TypeExpr, expected: &TypeExpr) -> bool {
             types_compatible(&base, &TypeExpr::Named(e.clone()))
         }
         (TypeExpr::Named(a), TypeExpr::Named(e)) => {
-            a == e
-                || (e == "Num" && (a == "Int" || a == "Float"))
-                || (e == "Float" && a == "Int")
+            a == e || (e == "Num" && (a == "Int" || a == "Float")) || (e == "Float" && a == "Int")
         }
         (TypeExpr::Named(_), TypeExpr::Literal(_))
         | (TypeExpr::Apply(_, _), TypeExpr::Literal(_))

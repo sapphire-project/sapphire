@@ -1,0 +1,223 @@
+use sapphire::compiler::compile;
+use sapphire::error::SapphireError;
+use sapphire::lexer::Lexer;
+use sapphire::parser::Parser;
+use sapphire::vm::{Vm, VmError, VmValue};
+
+fn eval(src: &str) -> VmValue {
+    let tokens = Lexer::new(src).scan_tokens();
+    let stmts = Parser::new(tokens).parse().expect("parse error");
+    let func = compile(&stmts).expect("compile error");
+    Vm::new(func, std::path::PathBuf::new())
+        .run()
+        .expect("vm error")
+        .expect("empty stack")
+}
+
+fn eval_err(src: &str) -> VmError {
+    let tokens = Lexer::new(src).scan_tokens();
+    let stmts = Parser::new(tokens).parse().expect("parse error");
+    let func = compile(&stmts).expect("compile error");
+    Vm::new(func, std::path::PathBuf::new())
+        .run()
+        .expect_err("expected vm error")
+}
+
+fn parse_err(src: &str) -> SapphireError {
+    let tokens = Lexer::new(src).scan_tokens();
+    Parser::new(tokens).parse().expect_err("expected parse error")
+}
+
+#[test]
+fn raise_unhandled() {
+    let err = eval_err(r#"raise "oops""#);
+    assert!(matches!(err, VmError::Raised(..)));
+}
+
+#[test]
+fn begin_rescue_catches_runtime_error() {
+    let src = "x = 0\nbegin\nx = 1 / 0\nrescue e\nx = 99\nend\nx";
+    assert_eq!(eval(src), VmValue::Int(99));
+}
+
+#[test]
+fn begin_else_skipped_on_error() {
+    let src = r#"x = 0
+begin
+  raise "err"
+rescue e
+  x = 99
+else
+  x = 2
+end
+x"#;
+    assert_eq!(eval(src), VmValue::Int(99));
+}
+
+#[test]
+fn begin_no_error_skips_rescue() {
+    let src = "x = 0\nbegin\nx = 42\nrescue e\nx = 1\nend\nx";
+    assert_eq!(eval(src), VmValue::Int(42));
+}
+
+#[test]
+fn try_rescue_else_ensure() {
+    let src = r#"x = 0
+result = try {
+  x = x + 1
+  10
+} rescue e {
+  0
+} else {
+  x = x + 10
+  20
+} ensure {
+  x = x + 100
+}
+x + result"#;
+    assert_eq!(eval(src), VmValue::Int(131));
+}
+
+#[test]
+fn multiple_typed_rescue_handlers() {
+    let src = r#"class IoError {}
+class ParseError {}
+def handle(kind) {
+  try {
+    if kind == 0 { raise IoError.new() }
+    raise ParseError.new()
+  } rescue e : IoError {
+    1
+  } rescue e {
+    2
+  }
+}
+handle(0) * 10 + handle(1)"#;
+    assert_eq!(eval(src), VmValue::Int(12));
+}
+
+#[test]
+fn inline_rescue_assigns_fallback() {
+    let src = r#"x = 1 / 0 rescue 7
+x"#;
+    assert_eq!(eval(src), VmValue::Int(7));
+}
+
+#[test]
+fn method_suffix_rescue() {
+    let src = r#"def risky(x: Int): Int {
+  if x < 0 { raise "bad" }
+  x * 2
+} rescue e {
+  0
+}
+risky(5) + risky(-1)"#;
+    assert_eq!(eval(src), VmValue::Int(10));
+}
+
+#[test]
+fn try_inside_while_rescue_and_ensure() {
+    let src = r#"i = 0
+while i < 3 {
+  try {
+    i = i + 1
+    if i == 1 { raise "bad" }
+  } rescue e {
+    i = 10
+  } ensure {
+    i = i + 1
+  }
+}
+i"#;
+    assert_eq!(eval(src), VmValue::Int(11));
+}
+
+#[test]
+fn call_with_block_suffix_rescue() {
+    let src = r#"def with_block() {
+  yield()
+}
+with_block { raise "bad" } rescue { 7 }"#;
+    assert_eq!(eval(src), VmValue::Int(7));
+}
+
+#[test]
+fn if_while_suffix_rescue_parse_error() {
+    for src in [
+        r#"if true { 1 } rescue { 2 }"#,
+        r#"while false { 1 } rescue { 2 }"#,
+    ] {
+        let err = parse_err(src);
+        assert!(matches!(
+            err,
+            SapphireError::ParseError { ref message, .. }
+                if message == "use 'try { ... }' to rescue if/while bodies"
+        ));
+    }
+}
+
+#[test]
+fn inline_rescue_in_function() {
+    let src = r#"def risky(x) {
+  if x < 0 { raise "bad" }
+  x * 2
+rescue e
+  0
+}
+risky(5)"#;
+    assert_eq!(eval(src), VmValue::Int(10));
+    let src2 = r#"def risky(x) {
+  if x < 0 { raise "bad" }
+  x * 2
+rescue e
+  0
+}
+risky(-1)"#;
+    assert_eq!(eval(src2), VmValue::Int(0));
+}
+
+#[test]
+fn inline_rescue_binds_error() {
+    let src = r#"def boom() {
+  raise "oops"
+  1
+rescue e
+  e
+}
+boom()"#;
+    assert_eq!(eval(src), VmValue::Str("oops".into()));
+}
+
+#[test]
+fn inline_rescue_in_method() {
+    let src = r#"class Safe {
+  def try_div(x) {
+    10 / x
+  rescue e
+    -1
+  }
+}
+Safe.new().try_div(2)"#;
+    assert_eq!(eval(src), VmValue::Int(5));
+    let src2 = r#"class Safe {
+  def try_div(x) {
+    10 / x
+  rescue e
+    -1
+  }
+}
+Safe.new().try_div(0)"#;
+    assert_eq!(eval(src2), VmValue::Int(-1));
+}
+
+#[test]
+fn raise_instance() {
+    let src = r#"class Err { attr msg }
+result = begin
+  raise Err.new(msg: "bad")
+rescue e
+  e.msg
+end
+result"#;
+    assert_eq!(eval(src), VmValue::Str("bad".into()));
+}
