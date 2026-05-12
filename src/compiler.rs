@@ -385,6 +385,12 @@ impl Compiler {
                 }
             }
 
+            Expr::Print(inner) => {
+                self.expr(inner)?;
+                self.emit(OpCode::Print);
+                self.emit(OpCode::Pop);
+            }
+
             Expr::Raise(expr) => {
                 self.expr(expr)?;
                 self.emit(OpCode::Raise);
@@ -502,6 +508,12 @@ impl Compiler {
     fn expr(&mut self, expr: &Expr) -> Result<(), CompileError> {
         match expr {
             Expr::Return(_) | Expr::Break(_) | Expr::Next(_) | Expr::Raise(_) => self.stmt(expr),
+
+            Expr::Print(inner) => {
+                self.expr(inner)?;
+                self.emit(OpCode::Print);
+                Ok(())
+            }
 
             Expr::While { .. } | Expr::MultiAssign { .. } | Expr::Import { .. } => {
                 self.stmt(expr)?;
@@ -716,25 +728,6 @@ impl Compiler {
                             self.emit(OpCode::InvokeWithBlock(ni, arg_count));
                         } else {
                             self.emit(OpCode::Invoke(ni, arg_count));
-                        }
-                        return Ok(());
-                    }
-                    // print(val) without an explicit receiver → IO.puts(val)
-                    if is_unresolved && name == "print" {
-                        self.emit_maybe_lexical_or_global("IO");
-                        let argc = args.len();
-                        for arg in args {
-                            self.expr(&arg.value)?;
-                        }
-                        let ni = self
-                            .state_mut()
-                            .chunk
-                            .add_constant(Constant::Str("puts".to_string()));
-                        if let Some(blk) = block {
-                            self.compile_block(blk)?;
-                            self.emit(OpCode::InvokeWithBlock(ni, argc));
-                        } else {
-                            self.emit(OpCode::Invoke(ni, argc));
                         }
                         return Ok(());
                     }

@@ -3704,6 +3704,16 @@ impl Vm {
 
 
 
+                OpCode::Print => {
+                    let val = self.pop()?;
+                    let s = self.format_value(&val);
+                    match self.output.as_mut() {
+                        Some(buf) => buf.push(s),
+                        None => println!("{}", s),
+                    }
+                    self.stack.push(val);
+                }
+
                 OpCode::GetGlobal(idx) => {
                     let name = match &self.frames.last().unwrap().function.chunk.constants[idx] {
                         Constant::Str(s) => s.clone(),

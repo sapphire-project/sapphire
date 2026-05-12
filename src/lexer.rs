@@ -511,7 +511,7 @@ impl Lexer {
             "self" => TokenKind::SelfKw,
             "super" => TokenKind::SuperKw,
             "yield" => TokenKind::Yield,
-
+            "print" => TokenKind::Print,
             "raise" => TokenKind::Raise,
             "begin" => TokenKind::Begin,
             "rescue" => TokenKind::Rescue,
