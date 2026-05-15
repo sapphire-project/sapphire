@@ -442,7 +442,7 @@ d.is_a?(Cat)      # false
 
 ## Error handling
 
-Use `raise` to signal an error. Handle errors with a `begin / rescue / end` block:
+Use `raise` to signal an error. Handle errors with a `try / rescue` block:
 
 ```ruby
 def parse_age(s: Str) -> Int {
@@ -451,32 +451,32 @@ def parse_age(s: Str) -> Int {
   age
 }
 
-begin
+try {
   print parse_age("25")   # 25
   print parse_age("0")    # raises
-rescue e
+} rescue e {
   print "bad input: #{e}"
-end
+}
 ```
 
 The `else` clause runs only when no error occurred:
 
 ```ruby
-begin
+try {
   result = 10 / 2
-rescue e
+} rescue e {
   print "error: #{e}"
-else
+} else {
   print "result: #{result}"   # result: 5
-end
+}
 ```
 
-A `rescue` clause inside a `def` body avoids the `begin / end` wrapper entirely:
+A `rescue` clause after a `def` body avoids wrapping the call site:
 
 ```ruby
 def safe_divide(a: Int, b: Int) -> Int {
   a / b
-rescue e
+} rescue e {
   print "cannot divide by zero"
   0
 }
@@ -492,11 +492,11 @@ class AppError {
   attr message: Str
 }
 
-begin
+try {
   raise AppError.new(message: "not found")
-rescue e
+} rescue e {
   print e.message   # not found
-end
+}
 ```
 
 ---
@@ -621,11 +621,11 @@ shapes = [
   Rectangle.new(width: 2.0, height: 8.0),
 ]
 
-begin
+try {
   summarise(shapes)
-rescue e
+} rescue e {
   print "Error: #{e}"
-end
+}
 ```
 
 Output:

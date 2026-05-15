@@ -180,13 +180,13 @@ p = Point.new(x: 1.0, y: 2.0)
 ### Error handling
 
 ```ruby
-begin
-  result = risky_op()
-rescue e
+result = try {
+  risky_op()
+} rescue e {
   print "caught: #{e}"
-else
+} else {
   print "ok: #{result}"
-end
+}
 ```
 
 Inline rescue inside a function:
@@ -194,7 +194,7 @@ Inline rescue inside a function:
 ```ruby
 def safe_div(a: Int, b: Int) -> Int {
   a / b
-rescue e
+} rescue e {
   0
 }
 ```
