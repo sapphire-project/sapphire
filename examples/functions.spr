@@ -46,7 +46,7 @@ def repeat(n: Int) {
     i = i + 1
   }
 }
-repeat(3) { |i| IO.puts("step #{i}") }
+repeat(3) { |i| print "step #{i}" }
 
 # yield with two arguments
 def each_pair(list) {
@@ -56,7 +56,7 @@ def each_pair(list) {
     i = i + 2
   }
 }
-each_pair([1, 2, 3, 4]) { |a, b| IO.puts("#{a} + #{b} = #{a + b}") }
+each_pair([1, 2, 3, 4]) { |a, b| print "#{a} + #{b} = #{a + b}" }
 
 # Recursive function
 def factorial(n: Int) -> Int {
