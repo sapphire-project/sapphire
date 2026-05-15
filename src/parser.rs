@@ -481,6 +481,10 @@ impl Parser {
         if self.check(&TokenKind::Try) {
             return self.try_expr();
         }
+        if self.check(&TokenKind::Print) {
+            self.advance();
+            return Ok(Expr::Print(Box::new(self.logical()?)));
+        }
         if self.check(&TokenKind::Type) {
             self.advance(); // consume 'type'
             let name = match self.peek().kind.clone() {
@@ -1903,6 +1907,10 @@ impl Parser {
                     TokenKind::Match => {
                         self.advance();
                         "match".to_string()
+                    }
+                    TokenKind::Print => {
+                        self.advance();
+                        "print".to_string()
                     }
                     _ => {
                         return Err(SapphireError::ParseError {

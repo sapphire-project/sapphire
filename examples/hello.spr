@@ -3,16 +3,16 @@
 name = "Sapphire"
 version = 1
 
-IO.puts("Hello from #{name} v#{version}!")
+print "Hello from #{name} v#{version}!"
 
 x = 10
 y = 3
-IO.puts("#{x} + #{y} = #{x + y}")
-IO.puts("#{x} - #{y} = #{x - y}")
-IO.puts("#{x} * #{y} = #{x * y}")
-IO.puts("#{x} / #{y} = #{x / y}")
-IO.puts("#{x} % #{y} = #{x % y}")
+print "#{x} + #{y} = #{x + y}"
+print "#{x} - #{y} = #{x - y}"
+print "#{x} * #{y} = #{x * y}"
+print "#{x} / #{y} = #{x / y}"
+print "#{x} % #{y} = #{x % y}"
 
 pi = 3.14159
-IO.puts("pi is approximately #{pi}")
-IO.puts("pi rounded down: #{pi.to_i}")
+print "pi is approximately #{pi}"
+print "pi rounded down: #{pi.to_i}"

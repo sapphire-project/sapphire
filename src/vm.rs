@@ -3712,6 +3712,13 @@ impl Vm {
                     self.stack.push(VmValue::Bool(matches));
                 }
 
+                OpCode::Print => {
+                    let val = self.pop()?;
+                    let s = self.format_value(&val);
+                    crate::output::emit_line(&s);
+                    self.stack.push(val);
+                }
+
                 OpCode::GetGlobal(idx) => {
                     let name = match &self.frames.last().unwrap().function.chunk.constants[idx] {
                         Constant::Str(s) => s.clone(),

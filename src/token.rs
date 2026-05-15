@@ -61,6 +61,7 @@ pub enum TokenKind {
     SelfKw,
     SuperKw,
     Yield,
+    Print,
     Raise,
     Begin,
     Try,

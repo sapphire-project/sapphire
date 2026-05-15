@@ -4,7 +4,7 @@
 def add(a, b) {
   a + b
 }
-IO.puts(add(3, 4))
+print add(3, 4)
 
 # Type annotations on parameters and return type
 def clamp(value: Int, min: Int, max: Int) -> Int {
@@ -16,17 +16,17 @@ def clamp(value: Int, min: Int, max: Int) -> Int {
     value
   }
 }
-IO.puts(clamp(5, 1, 10))
-IO.puts(clamp(-3, 1, 10))
-IO.puts(clamp(99, 1, 10))
+print clamp(5, 1, 10)
+print clamp(-3, 1, 10)
+print clamp(99, 1, 10)
 
 # Early return
 def abs(n: Int) -> Int {
   return -n if n < 0
   n
 }
-IO.puts(abs(-7))
-IO.puts(abs(4))
+print abs(-7)
+print abs(4)
 
 # Closures — functions capture surrounding variables
 total = 0
@@ -36,7 +36,7 @@ def accumulate(n) {
 accumulate(10)
 accumulate(5)
 accumulate(3)
-IO.puts("total: #{total}")
+print "total: #{total}"
 
 # Blocks and yield
 def repeat(n: Int) {
@@ -63,4 +63,4 @@ def factorial(n: Int) -> Int {
   return 1 if n <= 1
   n * factorial(n - 1)
 }
-IO.puts(factorial(6))
+print factorial(6)

@@ -13,10 +13,10 @@ def grade(score: Int) -> String {
   }
 }
 
-IO.puts(grade(95))
-IO.puts(grade(83))
-IO.puts(grade(71))
-IO.puts(grade(50))
+print grade(95)
+print grade(83)
+print grade(71)
+print grade(50)
 
 # while — sum 1 to 100
 sum = 0
@@ -25,7 +25,7 @@ while n <= 100 {
   sum = sum + n
   n = n + 1
 }
-IO.puts("Sum 1..100 = #{sum}")
+print "Sum 1..100 = #{sum}"
 
 # while with next (skip) and break (exit early)
 # increment first so next doesn't cause an infinite loop
@@ -34,6 +34,6 @@ while i < 10 {
   i = i + 1
   next if i % 2 == 0   # skip even numbers
   break if i > 7       # stop after 7
-  IO.puts(i)
+  print i
 }
 # prints 1, 3, 5, 7

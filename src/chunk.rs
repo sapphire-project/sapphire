@@ -195,6 +195,10 @@ pub enum OpCode {
     /// Pop a Range and push its `to` field as Int.
     RangeTo,
 
+    // Output
+    /// Pop TOS, print it with a newline, push the value back.
+    Print,
+
     // Module loading
     /// Load, compile, and execute a relative file in the current scope.
     /// `path_idx` is a Str constant holding the import path.

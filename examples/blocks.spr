@@ -58,4 +58,4 @@ raise "map any? wrong"  if !map_any
 raise "map all? wrong"  if !map_all
 raise "map none? wrong" if !map_none
 
-IO.puts("blocks: all checks passed")
+print "blocks: all checks passed"
