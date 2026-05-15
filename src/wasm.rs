@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use wasm_bindgen::prelude::*;
 
-use crate::{compiler, lexer, parser, typechecker, vm};
+use crate::{compiler, lexer, output, parser, typechecker, vm};
 
 #[wasm_bindgen]
 pub struct RunResult {
@@ -63,9 +63,10 @@ pub fn run_sapphire(source: &str) -> RunResult {
     };
 
     let mut machine = vm::Vm::new(func, PathBuf::new());
-    machine.output = Some(Vec::new());
+    output::activate();
 
     if let Err(e) = machine.load_stdlib() {
+        let _ = output::take();
         return RunResult {
             output: String::new(),
             error: Some(e.to_string()),
@@ -74,11 +75,11 @@ pub fn run_sapphire(source: &str) -> RunResult {
 
     match machine.run() {
         Ok(_) => RunResult {
-            output: machine.output.unwrap_or_default().join("\n"),
+            output: output::take(),
             error: None,
         },
         Err(e) => RunResult {
-            output: machine.output.unwrap_or_default().join("\n"),
+            output: output::take(),
             error: Some(e.to_string()),
         },
     }

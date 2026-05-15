@@ -4,61 +4,61 @@
 
 numbers = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3]
 
-print "size: #{numbers.size}"
-print "first:  #{numbers.first}"
-print "last:   #{numbers.last}"
+IO.puts("size: #{numbers.size}")
+IO.puts("first:  #{numbers.first}")
+IO.puts("last:   #{numbers.last}")
 
 doubled = numbers.map { |n| n * 2 }
-doubled.each { |n| print n }
+doubled.each { |n| IO.puts(n) }
 
 evens = numbers.select { |n| n % 2 == 0 }
-print "even count: #{evens.size}"
+IO.puts("even count: #{evens.size}")
 
 total = numbers.reduce(0) { |acc, n| acc + n }
-print "sum: #{total}"
+IO.puts("sum: #{total}")
 
 sorted = numbers.sort
-print "min: #{sorted.first}"
-print "max: #{sorted.last}"
+IO.puts("min: #{sorted.first}")
+IO.puts("max: #{sorted.last}")
 
 unique = numbers.uniq
-print "unique: #{unique.size} values"
+IO.puts("unique: #{unique.size} values")
 
-numbers.each_with_index { |n, i| print "  [#{i}] = #{n}" }
+numbers.each_with_index { |n, i| IO.puts("  [#{i}] = #{n}") }
 
-print "any > 8?  #{numbers.any? { |n| n > 8 }}"
-print "all > 0?  #{numbers.all? { |n| n > 0 }}"
-print "none < 0? #{numbers.none? { |n| n < 0 }}"
+IO.puts("any > 8?  #{numbers.any? { |n| n > 8 }}")
+IO.puts("all > 0?  #{numbers.all? { |n| n > 0 }}")
+IO.puts("none < 0? #{numbers.none? { |n| n < 0 }}")
 
 # List mutation
 stack = []
 stack.append(10)
 stack.append(20)
 stack.append(30)
-print "popped: #{stack.pop}"
-print "stack size: #{stack.size}"
+IO.puts("popped: #{stack.pop}")
+IO.puts("stack size: #{stack.size}")
 
 # ── Maps ───────────────────────────────────────────────────────────────────────
 
 scores = { alice: 95, bob: 82, carol: 91 }
 
-print "size: #{scores.size}"
-print "has alice? #{scores.has_key?("alice")}"
-print "has dave?  #{scores.has_key?("dave")}"
+IO.puts("size: #{scores.size}")
+IO.puts("has alice? #{scores.has_key?("alice")}")
+IO.puts("has dave?  #{scores.has_key?("dave")}")
 
-scores.each { |name, score| print "  #{name}: #{score}" }
+scores.each { |name, score| IO.puts("  #{name}: #{score}") }
 
 passing = scores.select { |name, score| score >= 90 }
-print "passing count: #{passing.size}"
+IO.puts("passing count: #{passing.size}")
 
 extras = { dave: 78 }
 all_scores = scores.merge(extras)
-print "total students: #{all_scores.size}"
+IO.puts("total students: #{all_scores.size}")
 
 # ── Ranges ─────────────────────────────────────────────────────────────────────
 
-print "Counting:"
-(1..5).each { |i| print i }
+IO.puts("Counting:")
+(1..5).each { |i| IO.puts(i) }
 
-print "includes 3? #{(1..5).include?(3)}"
-print "includes 6? #{(1..5).include?(6)}"
+IO.puts("includes 3? #{(1..5).include?(3)}")
+IO.puts("includes 6? #{(1..5).include?(6)}")

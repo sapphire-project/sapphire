@@ -39,12 +39,12 @@ class Circle < Shape {
 }
 
 r = Rectangle.new(width: 4, height: 5)
-print r.describe
-print "Area: #{r.area}"
+IO.puts(r.describe)
+IO.puts("Area: #{r.area}")
 
 c = Circle.new(color: "blue", radius: 3)
-print c.describe
-print "Area: #{c.area}"
+IO.puts(c.describe)
+IO.puts("Area: #{c.area}")
 
 # Field mutation via methods
 class Counter {
@@ -67,11 +67,11 @@ counter = Counter.new
 counter.inc
 counter.inc
 counter.inc
-print "Counter: #{counter.value}"
+IO.puts("Counter: #{counter.value}")
 counter.reset
-print "After reset: #{counter.value}"
+IO.puts("After reset: #{counter.value}")
 
 # is_a? type checking
-print r.is_a?(Rectangle)
-print r.is_a?(Shape)
-print r.is_a?(Circle)
+IO.puts(r.is_a?(Rectangle))
+IO.puts(r.is_a?(Shape))
+IO.puts(r.is_a?(Circle))

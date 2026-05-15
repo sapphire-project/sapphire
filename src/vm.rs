@@ -624,8 +624,6 @@ pub struct Vm {
     current_dir: PathBuf,
     /// Canonicalized paths of files already imported; prevents double-loading.
     imported: HashSet<PathBuf>,
-    /// When `Some`, print output is buffered here instead of written to stdout.
-    pub output: Option<Vec<String>>,
     /// Open TCP sockets keyed by integer fd; lives outside the GC.
     sockets: HashMap<i64, std::io::BufReader<std::net::TcpStream>>,
     next_socket_id: i64,
@@ -658,7 +656,6 @@ impl Vm {
             globals: HashMap::new(),
             current_dir,
             imported: HashSet::new(),
-            output: None,
             sockets: HashMap::new(),
             next_socket_id: 0,
             regexes: HashMap::new(),
@@ -681,7 +678,6 @@ impl Vm {
             globals: HashMap::new(),
             current_dir: PathBuf::new(),
             imported: HashSet::new(),
-            output: None,
             sockets: HashMap::new(),
             next_socket_id: 0,
             regexes: HashMap::new(),
@@ -3714,16 +3710,6 @@ impl Vm {
                     let val = self.pop()?;
                     let matches = self.rescue_type_matches(&val, &expected);
                     self.stack.push(VmValue::Bool(matches));
-                }
-
-                OpCode::Print => {
-                    let val = self.pop()?;
-                    let s = self.format_value(&val);
-                    match self.output.as_mut() {
-                        Some(buf) => buf.push(s),
-                        None => println!("{}", s),
-                    }
-                    self.stack.push(val);
                 }
 
                 OpCode::GetGlobal(idx) => {

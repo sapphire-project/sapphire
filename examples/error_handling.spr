@@ -4,23 +4,23 @@
 begin
   raise "something went wrong"
 rescue e
-  print "Caught: #{e}"
+  IO.puts("Caught: #{e}")
 end
 
 # else runs only when no exception is raised
 begin
   x = 10 / 2
 rescue e
-  print "division failed: #{e}"
+  IO.puts("division failed: #{e}")
 else
-  print "result: #{x}"
+  IO.puts("result: #{x}")
 end
 
 # Rescue a runtime error (division by zero)
 begin
   result = 1 / 0
 rescue e
-  print "runtime error caught: #{e}"
+  IO.puts("runtime error caught: #{e}")
 end
 
 # Raise inside a function with rescue at the call site
@@ -31,19 +31,19 @@ def parse_age(s: String) -> Int {
 }
 
 begin
-  print parse_age("25")
-  print parse_age("0")
+  IO.puts(parse_age("25"))
+  IO.puts(parse_age("0"))
 rescue e
-  print "bad input: #{e}"
+  IO.puts("bad input: #{e}")
 end
 
 # Inline rescue inside a function body
 def safe_divide(a: Int, b: Int) -> Int {
   a / b
 rescue e
-  print "cannot divide by zero, returning 0"
+  IO.puts("cannot divide by zero, returning 0")
   0
 }
 
-print safe_divide(10, 2)
-print safe_divide(10, 0)
+IO.puts(safe_divide(10, 2))
+IO.puts(safe_divide(10, 0))

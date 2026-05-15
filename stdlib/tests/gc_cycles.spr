@@ -12,4 +12,4 @@ b.next_node = a
 a = nil
 b = nil
 
-print "ok"
+IO.puts("ok")

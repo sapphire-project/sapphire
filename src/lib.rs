@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod output;
 pub mod chunk;
 pub mod compiler;
 pub mod datetime;

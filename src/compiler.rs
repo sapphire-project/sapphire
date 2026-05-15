@@ -895,12 +895,6 @@ impl Compiler {
                 Ok(())
             }
 
-            Expr::Print(inner) => {
-                self.expr(inner)?;
-                self.emit(OpCode::Print);
-                Ok(())
-            }
-
             Expr::Class {
                 name,
                 type_params,
