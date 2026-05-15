@@ -196,7 +196,7 @@ pub enum OpCode {
     RangeTo,
 
     // Output
-    /// Pop TOS, print it with a newline, push the value back.
+    /// Pop TOS, print it with a newline, push Nil.
     Print,
 
     // Module loading
