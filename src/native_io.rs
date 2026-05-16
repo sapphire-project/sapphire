@@ -1,6 +1,7 @@
-use std::io::{BufRead, Write};
+use std::io::BufRead;
 
 use crate::gc::{GcHeap, GcRef};
+use crate::output;
 use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
@@ -25,7 +26,7 @@ fn io_puts(
     args: &[VmValue],
     line: u32,
 ) -> Result<VmValue, VmError> {
-    println!("{}", format_arg("puts", args, line)?);
+    output::emit_line(&format_arg("puts", args, line)?);
     Ok(VmValue::Nil)
 }
 
@@ -35,8 +36,7 @@ fn io_print(
     args: &[VmValue],
     line: u32,
 ) -> Result<VmValue, VmError> {
-    print!("{}", format_arg("print", args, line)?);
-    std::io::stdout().flush().ok();
+    output::emit_raw(&format_arg("print", args, line)?);
     Ok(VmValue::Nil)
 }
 
