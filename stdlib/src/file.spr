@@ -1,1 +1,8 @@
+# File provides filesystem and path helpers.
+#
+#   File.read("notes.txt")                 # read file contents
+#   File.write("notes.txt", "hello")       # write file contents
+#   File.join("tmp", "notes.txt")          # "tmp/notes.txt"
+#   File.basename("/tmp/notes.txt")        # "notes.txt"
+#
 class File { }

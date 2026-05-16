@@ -1,11 +1,52 @@
+use std::path::{Path, PathBuf};
+use std::time::UNIX_EPOCH;
+
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, NativeArity, VmError, VmValue, define_native_class_method};
 use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
+    define_native_class_method(heap, class_ref, "basename", 1, file_basename);
+    define_native_class_method(heap, class_ref, "delete", 1, file_delete);
+    define_native_class_method(heap, class_ref, "directory?", 1, file_directory_q);
+    define_native_class_method(heap, class_ref, "dirname", 1, file_dirname);
     define_native_class_method(heap, class_ref, "exist?", 1, file_exist_q);
+    define_native_class_method(heap, class_ref, "extname", 1, file_extname);
+    define_native_class_method(heap, class_ref, "file?", 1, file_file_q);
+    define_native_class_method(heap, class_ref, "join", NativeArity::at_least(0), file_join);
+    define_native_class_method(heap, class_ref, "mtime", 1, file_mtime);
     define_native_class_method(heap, class_ref, "read", 1, file_read);
+    define_native_class_method(heap, class_ref, "rename", 2, file_rename);
+    define_native_class_method(heap, class_ref, "size", 1, file_size);
     define_native_class_method(heap, class_ref, "write", 2, file_write);
+}
+
+fn path_arg<'a>(
+    class: &str,
+    method: &str,
+    arg: &'a VmValue,
+    line: u32,
+) -> Result<&'a str, VmError> {
+    match arg {
+        Str(path) => Ok(path.as_str()),
+        _ => Err(VmError::TypeError {
+            message: format!("{class}.{method}: path must be a string"),
+            line,
+        }),
+    }
+}
+
+fn io_raised(path: &str, e: std::io::Error) -> VmError {
+    VmError::Raised(Str(format!("{path}: {e}")))
+}
+
+fn path_string(path: &Path) -> String {
+    let s = path.to_string_lossy();
+    if s.is_empty() {
+        ".".to_string()
+    } else {
+        s.into_owned()
+    }
 }
 
 fn file_exist_q(
@@ -27,6 +68,40 @@ fn file_exist_q(
     }
 }
 
+fn file_file_q(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => Ok(VmValue::Bool(
+            Path::new(path_arg("File", "file?", arg, line)?).is_file(),
+        )),
+        _ => Err(VmError::TypeError {
+            message: format!("File.file? expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_directory_q(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => Ok(VmValue::Bool(
+            Path::new(path_arg("File", "directory?", arg, line)?).is_dir(),
+        )),
+        _ => Err(VmError::TypeError {
+            message: format!("File.directory? expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
 fn file_read(
     _heap: &mut GcHeap<HeapObject>,
     _recv: &VmValue,
@@ -43,6 +118,171 @@ fn file_read(
         }),
         _ => Err(VmError::TypeError {
             message: format!("File.read expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_delete(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => {
+            let path = path_arg("File", "delete", arg, line)?;
+            std::fs::remove_file(path)
+                .map(|_| VmValue::Nil)
+                .map_err(|e| io_raised(path, e))
+        }
+        _ => Err(VmError::TypeError {
+            message: format!("File.delete expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_rename(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [from, to] => {
+            let from = path_arg("File", "rename", from, line)?;
+            let to = path_arg("File", "rename", to, line)?;
+            std::fs::rename(from, to)
+                .map(|_| VmValue::Nil)
+                .map_err(|e| io_raised(from, e))
+        }
+        _ => Err(VmError::TypeError {
+            message: format!("File.rename expects 2 arguments, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_size(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => {
+            let path = path_arg("File", "size", arg, line)?;
+            let len = std::fs::metadata(path)
+                .map_err(|e| io_raised(path, e))?
+                .len();
+            Ok(VmValue::Int(len as i64))
+        }
+        _ => Err(VmError::TypeError {
+            message: format!("File.size expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_mtime(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => {
+            let path = path_arg("File", "mtime", arg, line)?;
+            let modified = std::fs::metadata(path)
+                .map_err(|e| io_raised(path, e))?
+                .modified()
+                .map_err(|e| io_raised(path, e))?;
+            let seconds = modified
+                .duration_since(UNIX_EPOCH)
+                .map_err(|e| VmError::Raised(Str(format!("{path}: {e}"))))?
+                .as_secs();
+            Ok(VmValue::Int(seconds as i64))
+        }
+        _ => Err(VmError::TypeError {
+            message: format!("File.mtime expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_join(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    let mut path = PathBuf::new();
+    for arg in args {
+        path.push(path_arg("File", "join", arg, line)?);
+    }
+    Ok(Str(path_string(&path)))
+}
+
+fn file_basename(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => {
+            let path = Path::new(path_arg("File", "basename", arg, line)?);
+            Ok(Str(path
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default()))
+        }
+        _ => Err(VmError::TypeError {
+            message: format!("File.basename expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_dirname(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => {
+            let path = Path::new(path_arg("File", "dirname", arg, line)?);
+            Ok(Str(path
+                .parent()
+                .map(path_string)
+                .unwrap_or_else(|| ".".to_string())))
+        }
+        _ => Err(VmError::TypeError {
+            message: format!("File.dirname expects 1 argument, got {}", args.len()),
+            line,
+        }),
+    }
+}
+
+fn file_extname(
+    _heap: &mut GcHeap<HeapObject>,
+    _recv: &VmValue,
+    args: &[VmValue],
+    line: u32,
+) -> Result<VmValue, VmError> {
+    match args {
+        [arg] => {
+            let path = Path::new(path_arg("File", "extname", arg, line)?);
+            let ext = path
+                .extension()
+                .map(|s| format!(".{}", s.to_string_lossy()))
+                .unwrap_or_default();
+            Ok(Str(ext))
+        }
+        _ => Err(VmError::TypeError {
+            message: format!("File.extname expects 1 argument, got {}", args.len()),
             line,
         }),
     }

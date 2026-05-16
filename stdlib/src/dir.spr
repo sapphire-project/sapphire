@@ -1,0 +1,7 @@
+# Dir provides directory helpers.
+#
+#   Dir.pwd                  # current working directory
+#   Dir.entries("tmp")       # [".", "..", ...]
+#   Dir.mkdir_p("tmp/cache") # create nested directories
+#
+class Dir { }
