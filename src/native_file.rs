@@ -6,12 +6,8 @@ use crate::vm::{HeapObject, NativeArity, VmError, VmValue, define_native_class_m
 use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
-    define_native_class_method(heap, class_ref, "basename", 1, file_basename);
     define_native_class_method(heap, class_ref, "delete", 1, file_delete);
-    define_native_class_method(heap, class_ref, "directory?", 1, file_directory_q);
-    define_native_class_method(heap, class_ref, "dirname", 1, file_dirname);
     define_native_class_method(heap, class_ref, "exist?", 1, file_exist_q);
-    define_native_class_method(heap, class_ref, "extname", 1, file_extname);
     define_native_class_method(heap, class_ref, "file?", 1, file_file_q);
     define_native_class_method(heap, class_ref, "join", NativeArity::at_least(0), file_join);
     define_native_class_method(heap, class_ref, "mtime", 1, file_mtime);
@@ -80,23 +76,6 @@ fn file_file_q(
         )),
         _ => Err(VmError::TypeError {
             message: format!("File.file? expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
-}
-
-fn file_directory_q(
-    _heap: &mut GcHeap<HeapObject>,
-    _recv: &VmValue,
-    args: &[VmValue],
-    line: u32,
-) -> Result<VmValue, VmError> {
-    match args {
-        [arg] => Ok(VmValue::Bool(
-            Path::new(path_arg("File", "directory?", arg, line)?).is_dir(),
-        )),
-        _ => Err(VmError::TypeError {
-            message: format!("File.directory? expects 1 argument, got {}", args.len()),
             line,
         }),
     }
@@ -222,70 +201,6 @@ fn file_join(
         path.push(path_arg("File", "join", arg, line)?);
     }
     Ok(Str(path_string(&path)))
-}
-
-fn file_basename(
-    _heap: &mut GcHeap<HeapObject>,
-    _recv: &VmValue,
-    args: &[VmValue],
-    line: u32,
-) -> Result<VmValue, VmError> {
-    match args {
-        [arg] => {
-            let path = Path::new(path_arg("File", "basename", arg, line)?);
-            Ok(Str(path
-                .file_name()
-                .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_default()))
-        }
-        _ => Err(VmError::TypeError {
-            message: format!("File.basename expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
-}
-
-fn file_dirname(
-    _heap: &mut GcHeap<HeapObject>,
-    _recv: &VmValue,
-    args: &[VmValue],
-    line: u32,
-) -> Result<VmValue, VmError> {
-    match args {
-        [arg] => {
-            let path = Path::new(path_arg("File", "dirname", arg, line)?);
-            Ok(Str(path
-                .parent()
-                .map(path_string)
-                .unwrap_or_else(|| ".".to_string())))
-        }
-        _ => Err(VmError::TypeError {
-            message: format!("File.dirname expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
-}
-
-fn file_extname(
-    _heap: &mut GcHeap<HeapObject>,
-    _recv: &VmValue,
-    args: &[VmValue],
-    line: u32,
-) -> Result<VmValue, VmError> {
-    match args {
-        [arg] => {
-            let path = Path::new(path_arg("File", "extname", arg, line)?);
-            let ext = path
-                .extension()
-                .map(|s| format!(".{}", s.to_string_lossy()))
-                .unwrap_or_default();
-            Ok(Str(ext))
-        }
-        _ => Err(VmError::TypeError {
-            message: format!("File.extname expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
 }
 
 fn file_write(

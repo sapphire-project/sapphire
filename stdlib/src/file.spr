@@ -5,4 +5,46 @@
 #   File.join("tmp", "notes.txt")          # "tmp/notes.txt"
 #   File.basename("/tmp/notes.txt")        # "notes.txt"
 #
-class File { }
+class File {
+  self {
+    def directory?(path) { Dir.exist?(path) }
+
+    def basename(path) {
+      path = self.trim_trailing_slashes(path)
+      return "/" if path == "/"
+      path.split("/").last
+    }
+
+    def dirname(path) {
+      path = self.trim_trailing_slashes(path)
+      return "/" if path == "/"
+
+      parts = path.split("/")
+      return "." if parts.size == 1
+
+      parts.pop
+      dir = parts.join("/")
+      if dir == "" { "/" } else { dir }
+    }
+
+    def extname(path) {
+      name = self.basename(path)
+      chars = name.chars
+      i = chars.size - 1
+
+      while i > 0 {
+        return name.slice(i, name.size - i) if chars[i] == "."
+        i = i - 1
+      }
+
+      ""
+    }
+
+    def trim_trailing_slashes(path) {
+      while path.size > 1 && path.ends_with?("/") {
+        path = path.slice(0, path.size - 1)
+      }
+      path
+    }
+  }
+}

@@ -5,10 +5,8 @@ use VmValue::Str;
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
     define_native_class_method(heap, class_ref, "children", 1, dir_children);
     define_native_class_method(heap, class_ref, "delete", 1, dir_delete);
-    define_native_class_method(heap, class_ref, "entries", 1, dir_entries);
     define_native_class_method(heap, class_ref, "exist?", 1, dir_exist_q);
     define_native_class_method(heap, class_ref, "mkdir", 1, dir_mkdir);
-    define_native_class_method(heap, class_ref, "mkdir_p", 1, dir_mkdir_p);
     define_native_class_method(heap, class_ref, "pwd", 0, dir_pwd);
 }
 
@@ -93,26 +91,6 @@ fn dir_children(
     }
 }
 
-fn dir_entries(
-    heap: &mut GcHeap<HeapObject>,
-    _recv: &VmValue,
-    args: &[VmValue],
-    line: u32,
-) -> Result<VmValue, VmError> {
-    match args {
-        [arg] => {
-            let path = path_arg("entries", arg, line)?;
-            let mut names = vec![Str(".".to_string()), Str("..".to_string())];
-            names.extend(read_child_names(&path)?);
-            Ok(VmValue::List(heap.alloc(HeapObject::List(names))))
-        }
-        _ => Err(VmError::TypeError {
-            message: format!("Dir.entries expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
-}
-
 fn dir_mkdir(
     _heap: &mut GcHeap<HeapObject>,
     _recv: &VmValue,
@@ -128,26 +106,6 @@ fn dir_mkdir(
         }
         _ => Err(VmError::TypeError {
             message: format!("Dir.mkdir expects 1 argument, got {}", args.len()),
-            line,
-        }),
-    }
-}
-
-fn dir_mkdir_p(
-    _heap: &mut GcHeap<HeapObject>,
-    _recv: &VmValue,
-    args: &[VmValue],
-    line: u32,
-) -> Result<VmValue, VmError> {
-    match args {
-        [arg] => {
-            let path = path_arg("mkdir_p", arg, line)?;
-            std::fs::create_dir_all(&path)
-                .map(|_| VmValue::Nil)
-                .map_err(|e| io_raised(&path, e))
-        }
-        _ => Err(VmError::TypeError {
-            message: format!("Dir.mkdir_p expects 1 argument, got {}", args.len()),
             line,
         }),
     }
