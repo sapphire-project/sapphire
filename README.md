@@ -1,20 +1,29 @@
 # Sapphire
 
-A Ruby-inspired, gradually typed, object-oriented scripting language — everything is an object, types are optional, and the syntax stays out of your way.
+A Ruby-inspired, gradually typed, object-oriented language — everything is an object, types are optional, and the syntax stays out of your way.
 
 **[Website](https://sapphire-lang.dev/)** · **[Try it online](https://sapphire-lang.dev/try/)** · **[Tutorial](https://sapphire-lang.dev/tutorial/)**
 
-## Features
+Sapphire is designed around three ideas: elegant syntax that reads like prose, a gradual type system you can lean on as much or as little as you want, and tooling that gets out of your way. Types are enforced at runtime when present — start untyped and add annotations where they help, without a separate build step or type checker.
 
-- **Gradual typing** — annotate as much or as little as you like; types are checked at runtime when present
-- **Everything is an object** — `Int`, `Bool`, `String`, and other primitives have methods
-- **Classes with inheritance** — single inheritance, `attr` fields, private methods via `defp`, class methods
-- **Closures and blocks** — first-class functions, `yield`, and block-accepting methods
-- **Rich standard library** — `List`, `Map`, `Set`, `String`, `Regex`, `Math`, `Date`, `File`, and more
-- **Imports** — split code across files with `import`
-- **Mark-and-sweep GC** — handles cycles; no manual memory management
+## Install
 
-## Quick look
+Sapphire is installed and managed via [Facet](https://github.com/sapphire-project/facet), the official toolchain manager (requires Rust):
+
+```
+cargo install --git https://github.com/sapphire-project/facet
+facet sapphire install latest
+```
+
+Then verify:
+
+```
+sapphire version
+```
+
+Pre-built binaries are also available on the [releases page](https://github.com/sapphire-project/sapphire/releases).
+
+## A first look
 
 ```ruby
 class Shape {
@@ -36,174 +45,52 @@ class Circle < Shape {
 }
 
 c = Circle.new(color: "blue", radius: 3.0)
-print c.describe()
-print c.is_a?(Shape)   # true
+print c.describe()    #=> "A blue shape with area 28.274..."
+print c.is_a?(Shape)  #=> true
 ```
 
-## Syntax
+`radius: Float` is enforced at runtime — `color` is untyped and takes any value.
 
-### Variables and types
+## Collections
 
-```ruby
-x = 10
-name: String = "alice"
-flag = true
-```
-
-### Arithmetic and comparisons
-
-```ruby
-1 + 2 * 3
-x == 10
-x > 0
-!flag
-```
-
-### Control flow
-
-```ruby
-if x > 0 {
-  print x
-} elsif x == 0 {
-  print "zero"
-} else {
-  print "negative"
-}
-
-while x < 10 {
-  x = x + 1
-}
-
-(1..5).each { |i| print i }
-```
-
-### Functions
-
-```ruby
-def add(a: Int, b: Int) -> Int {
-  a + b
-}
-
-def clamp(value: Int, min: Int, max: Int) -> Int {
-  return min if value < min
-  return max if value > max
-  value
-}
-```
-
-Blocks and `yield`:
-
-```ruby
-def repeat(n: Int) {
-  i = 0
-  while i < n {
-    yield(i)
-    i = i + 1
-  }
-}
-
-repeat(3) { |i| print "step #{i}" }
-```
-
-### Classes
-
-```ruby
-class BankAccount {
-  attr balance: Int = 0
-
-  def deposit(amount: Int) {
-    self.balance = self.balance + validate(amount)
-  }
-
-  def withdraw(amount: Int) {
-    self.balance = self.balance - validate(amount)
-  }
-
-  defp validate(amount: Int) -> Int {
-    raise "amount must be positive" if amount <= 0
-    amount
-  }
-}
-
-account = BankAccount.new()
-account.deposit(100)
-account.withdraw(30)
-print account.balance   # 70
-```
-
-Class methods use `self { }`:
-
-```ruby
-class Color {
-  attr r: Int
-  attr g: Int
-  attr b: Int
-
-  self {
-    def red()   { Color.new(r: 255, g: 0, b: 0) }
-    def green() { Color.new(r: 0, g: 255, b: 0) }
-    def blue()  { Color.new(r: 0, g: 0, b: 255) }
-  }
-}
-
-c = Color.red()
-```
-
-### Collections
+Blocks make iteration expressive without special syntax:
 
 ```ruby
 numbers = [3, 1, 4, 1, 5, 9]
 
-doubled = numbers.map { |n| n * 2 }
+doubled = numbers.map    { |n| n * 2 }
 evens   = numbers.select { |n| n % 2 == 0 }
 total   = numbers.reduce(0) { |acc, n| acc + n }
 
-print numbers.any? { |n| n > 8 }   # true
-print numbers.all? { |n| n > 0 }   # true
+print doubled  #=> [6, 2, 8, 2, 10, 18]
+print evens    #=> [4]
+print total    #=> 23
 ```
 
-```ruby
-scores = { alice: 95, bob: 82, carol: 91 }
-scores.each { |name, score| print "#{name}: #{score}" }
-passing = scores.select { |_, score| score >= 90 }
-```
+The same block syntax works for your own methods — `yield` calls the block passed to the current function.
 
-### Imports
-
-```ruby
-import "./geometry/point"
-import "./geometry/shapes"
-
-p = Point.new(x: 1.0, y: 2.0)
-```
-
-### Error handling
-
-```ruby
-result = try {
-  risky_op()
-} rescue e {
-  print "caught: #{e}"
-} else {
-  print "ok: #{result}"
-}
-```
-
-Inline rescue inside a function:
-
-```ruby
-def safe_div(a: Int, b: Int) -> Int {
-  a / b
-} rescue e {
-  0
-}
-```
-
-## Running
+## CLI
 
 ```
-sapphire run file.spr      # run a file
-sapphire test              # run *_test.spr files
-sapphire typecheck file.spr
-sapphire console           # start the REPL
+sapphire run file.spr       # run a file
+sapphire test [path]        # run *_test.spr files recursively
+sapphire typecheck file.spr # type-check without running
+sapphire console            # interactive REPL
+sapphire version
 ```
+
+## Learn more
+
+The [tutorial](https://sapphire-lang.dev/tutorial/) covers the full language: control flow, functions, classes, error handling, and imports.
+
+- [Try it in the browser](https://sapphire-lang.dev/try/)
+- [Standard library](https://sapphire-lang.dev/stdlib/)
+- [Changelog](CHANGELOG.md)
+
+## Contributing
+
+Contributions are welcome. Open an issue to discuss a bug or feature before sending a pull request.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
