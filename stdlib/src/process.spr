@@ -4,6 +4,7 @@
 #   Process.exit             # exit with code 0
 #   Process.exit(1)          # exit with code 1
 #   Process.args             # List of arguments passed to the script
+#                            # Parse flags: CLI.parse(Process.args) or OptionParser.parse(...) (alias)
 #   Process.run("ls -la")    # run a shell command; returns a Process.Result
 #
 #   result = Process.run("echo hi")
