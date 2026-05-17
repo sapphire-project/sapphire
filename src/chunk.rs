@@ -262,6 +262,7 @@ pub enum Constant {
         method_names: Vec<String>,
         private_methods: Vec<String>,
         class_method_names: Vec<String>,
+        class_private_methods: Vec<String>,
         /// Names of nested classes; matched 1-to-1 with class values pushed after instance methods.
         nested_class_names: Vec<String>,
     },

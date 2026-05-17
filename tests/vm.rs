@@ -968,6 +968,32 @@ Greeter.hello()"#;
 }
 
 #[test]
+fn private_class_method_callable_from_class_method() {
+    let src = r#"class Calculator {
+  self {
+    def double(n) { self.scale(n) }
+    defp scale(n) { n * 2 }
+  }
+}
+Calculator.double(21)"#;
+    assert_eq!(eval(src), VmValue::Int(42));
+}
+
+#[test]
+fn private_class_method_rejected_from_outside_class() {
+    let src = r#"class Calculator {
+  self {
+    defp scale(n) { n * 2 }
+  }
+}
+Calculator.scale(21)"#;
+    let err = eval_err(src);
+    assert!(
+        matches!(err, VmError::TypeError { ref message, .. } if message.contains("private class method"))
+    );
+}
+
+#[test]
 fn class_method_lexical_constant_without_self_prefix() {
     let src = r#"class Math {
   PI = 3
