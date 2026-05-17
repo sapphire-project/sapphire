@@ -1895,6 +1895,7 @@ impl Vm {
                         includes,
                         own_fields,
                         class_method_names,
+                        class_private_methods,
                         method_names,
                         private_methods,
                         nested_class_names,
@@ -1914,6 +1915,7 @@ impl Vm {
                                 method_names,
                                 private_methods,
                                 class_method_names,
+                                class_private_methods,
                                 nested_class_names,
                             } => {
                                 let own_fields: Vec<(String, VmValue)> = field_names
@@ -1936,6 +1938,7 @@ impl Vm {
                                     includes.clone(),
                                     own_fields,
                                     class_method_names.clone(),
+                                    class_private_methods.clone(),
                                     method_names.clone(),
                                     private_methods.clone(),
                                     nested_class_names.clone(),
@@ -1976,13 +1979,14 @@ impl Vm {
                     for (mname, closure) in class_method_names.iter().zip(class_closures) {
                         match closure {
                             VmValue::Closure { function, upvalues } => {
+                                let private = class_private_methods.contains(mname);
                                 own_class_methods.insert(
                                     mname.clone(),
                                     VmMethod {
                                         function: function.clone(),
                                         upvalues: upvalues.clone(),
                                         defined_in: class_name.clone(),
-                                        private: false,
+                                        private,
                                     },
                                 );
                             }
@@ -2594,6 +2598,22 @@ impl Vm {
                     {
                         let method_opt = class_methods.get(&method_name).cloned();
                         if let Some(method) = method_opt {
+                            if method.private {
+                                let caller_class = self
+                                    .frames
+                                    .last()
+                                    .and_then(|f| f.class_name.as_deref())
+                                    .unwrap_or("");
+                                if caller_class != method.defined_in {
+                                    return Err(VmError::TypeError {
+                                        message: format!(
+                                            "private class method '{}' called from outside class",
+                                            method_name
+                                        ),
+                                        line,
+                                    });
+                                }
+                            }
                             if method.function.arity != arg_count {
                                 return Err(VmError::TypeError {
                                     message: format!(

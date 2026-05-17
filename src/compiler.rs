@@ -1963,6 +1963,11 @@ impl Compiler {
             .collect();
         let class_method_names: Vec<String> =
             class_methods.iter().map(|m| m.name.clone()).collect();
+        let class_private_methods: Vec<String> = class_methods
+            .iter()
+            .filter(|m| m.private)
+            .map(|m| m.name.clone())
+            .collect();
         let desc_idx = self.state_mut().chunk.add_constant(Constant::ClassDesc {
             name: name.to_string(),
             superclass: static_super.map(|s| s.to_string()),
@@ -1976,6 +1981,7 @@ impl Compiler {
             method_names,
             private_methods,
             class_method_names,
+            class_private_methods,
             nested_class_names,
         });
         self.emit(OpCode::DefClass(desc_idx));
