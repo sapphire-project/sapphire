@@ -7,6 +7,7 @@ pub mod error;
 pub mod gc;
 pub mod lexer;
 pub mod native;
+pub mod native_dir;
 pub mod native_env;
 pub mod native_file;
 pub mod native_float;

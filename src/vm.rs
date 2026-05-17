@@ -573,6 +573,7 @@ pub struct CoreClasses {
     pub map_cls: Option<GcRef>,
     pub env_cls: Option<GcRef>,
     pub file_cls: Option<GcRef>,
+    pub dir_cls: Option<GcRef>,
     pub math_cls: Option<GcRef>,
     pub io_cls: Option<GcRef>,
 }
@@ -1227,7 +1228,9 @@ impl Vm {
             self.core_classes.map_cls,
             self.core_classes.env_cls,
             self.core_classes.file_cls,
+            self.core_classes.dir_cls,
             self.core_classes.math_cls,
+            self.core_classes.io_cls,
         ]
         .into_iter()
         .flatten()
@@ -1332,6 +1335,13 @@ impl Vm {
             methods: HashMap::new(),
             class_methods: HashMap::new(),
         });
+        let dir_cls = self.heap.alloc(HeapObject::ClassObject {
+            name: "Dir".into(),
+            superclass: Some(object),
+            class_ref: None,
+            methods: HashMap::new(),
+            class_methods: HashMap::new(),
+        });
         let math_cls = self.heap.alloc(HeapObject::ClassObject {
             name: "Math".into(),
             superclass: Some(object),
@@ -1350,7 +1360,7 @@ impl Vm {
         // Two-phase fixup: set class_ref now that class_cls is known.
         for r in [
             object, class_cls, set_cls, nil_cls, int_cls, float_cls, string_cls, range_cls,
-            list_cls, map_cls, env_cls, file_cls, math_cls, io_cls,
+            list_cls, map_cls, env_cls, file_cls, dir_cls, math_cls, io_cls,
         ] {
             if let HeapObject::ClassObject { class_ref, .. } = self.heap.get_mut(r) {
                 *class_ref = Some(class_cls);
@@ -1370,6 +1380,7 @@ impl Vm {
             map_cls: Some(map_cls),
             env_cls: Some(env_cls),
             file_cls: Some(file_cls),
+            dir_cls: Some(dir_cls),
             math_cls: Some(math_cls),
             io_cls: Some(io_cls),
         };
@@ -1377,6 +1388,7 @@ impl Vm {
         crate::native_set::register_class_methods(&mut self.heap, set_cls);
         crate::native_env::register_class_methods(&mut self.heap, env_cls);
         crate::native_file::register_class_methods(&mut self.heap, file_cls);
+        crate::native_dir::register_class_methods(&mut self.heap, dir_cls);
         crate::native_nil::register_methods(&mut self.heap, nil_cls);
         crate::native_int::register_methods(&mut self.heap, int_cls);
         crate::native_float::register_methods(&mut self.heap, float_cls);
@@ -1465,6 +1477,7 @@ impl Vm {
             "Map" => self.core_classes.map_cls,
             "Env" => self.core_classes.env_cls,
             "File" => self.core_classes.file_cls,
+            "Dir" => self.core_classes.dir_cls,
             "Math" => self.core_classes.math_cls,
             "IO" => self.core_classes.io_cls,
             _ => None,
@@ -1497,6 +1510,7 @@ impl Vm {
             ("stdlib/regex.spr", include_str!("../stdlib/src/regex.spr")),
             ("stdlib/test.spr", include_str!("../stdlib/src/test.spr")),
             ("stdlib/file.spr", include_str!("../stdlib/src/file.spr")),
+            ("stdlib/dir.spr", include_str!("../stdlib/src/dir.spr")),
             ("stdlib/env.spr", include_str!("../stdlib/src/env.spr")),
             ("stdlib/io.spr", include_str!("../stdlib/src/io.spr")),
             (

@@ -1,0 +1,36 @@
+# Dir provides directory helpers.
+#
+#   Dir.pwd                  # current working directory
+#   Dir.entries("tmp")       # [".", "..", ...]
+#   Dir.mkdir_p("tmp/cache") # create nested directories
+#
+class Dir {
+  self {
+    # Returns directory entries including "." and "..".
+    #
+    #   Dir.entries("tmp")   # [".", "..", ...]
+    #
+    def entries(path) {
+      result = self.children(path)
+      result.prepend("..")
+      result.prepend(".")
+      result
+    }
+
+    # Creates path and any missing parent directories.
+    #
+    #   Dir.mkdir_p("tmp/cache")
+    #
+    def mkdir_p(path) {
+      return nil if self.exist?(path)
+
+      parent = File.dirname(path)
+      if parent != path && parent != "." && !self.exist?(parent) {
+        self.mkdir_p(parent)
+      }
+
+      self.mkdir(path) if !self.exist?(path)
+      nil
+    }
+  }
+}
