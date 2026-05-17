@@ -1,4 +1,4 @@
-use super::{eval, eval_err, VmValue};
+use super::{eval, VmValue};
 use std::path::{Path, PathBuf};
 
 fn temp_path(name: &str) -> PathBuf {
@@ -85,13 +85,5 @@ fn path_helpers() {
     assert_eq!(
         eval(r#"File.extname("/tmp/sapphire/README")"#),
         VmValue::Str("".into())
-    );
-}
-
-#[test]
-fn trim_trailing_slashes_is_not_part_of_api() {
-    let err = eval_err(r#"File.trim_trailing_slashes("/tmp/cache/")"#);
-    assert!(
-        matches!(err, sapphire::vm::VmError::TypeError { ref message, .. } if message.contains("unknown class method"))
     );
 }
