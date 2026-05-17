@@ -1,5 +1,5 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{HeapObject, VmError, VmValue, define_native_class_method};
+use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
 use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
@@ -40,15 +40,9 @@ fn read_child_names(path: &str) -> Result<Vec<VmValue>, VmError> {
 fn dir_pwd(
     _heap: &mut GcHeap<HeapObject>,
     _recv: &VmValue,
-    args: &[VmValue],
-    line: u32,
+    _args: &[VmValue],
+    _line: u32,
 ) -> Result<VmValue, VmError> {
-    if !args.is_empty() {
-        return Err(VmError::TypeError {
-            message: format!("Dir.pwd expects 0 arguments, got {}", args.len()),
-            line,
-        });
-    }
     std::env::current_dir()
         .map(|path| Str(path.to_string_lossy().into_owned()))
         .map_err(|e| VmError::Raised(Str(format!("Dir.pwd: {e}"))))
@@ -64,10 +58,7 @@ fn dir_exist_q(
         [arg] => Ok(VmValue::Bool(
             std::path::Path::new(&path_arg("exist?", arg, line)?).is_dir(),
         )),
-        _ => Err(VmError::TypeError {
-            message: format!("Dir.exist? expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("Dir.exist? arity checked before native dispatch"),
     }
 }
 
@@ -84,10 +75,7 @@ fn dir_children(
                 heap.alloc(HeapObject::List(read_child_names(&path)?)),
             ))
         }
-        _ => Err(VmError::TypeError {
-            message: format!("Dir.children expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("Dir.children arity checked before native dispatch"),
     }
 }
 
@@ -104,10 +92,7 @@ fn dir_mkdir(
                 .map(|_| VmValue::Nil)
                 .map_err(|e| io_raised(&path, e))
         }
-        _ => Err(VmError::TypeError {
-            message: format!("Dir.mkdir expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("Dir.mkdir arity checked before native dispatch"),
     }
 }
 
@@ -124,9 +109,6 @@ fn dir_delete(
                 .map(|_| VmValue::Nil)
                 .map_err(|e| io_raised(&path, e))
         }
-        _ => Err(VmError::TypeError {
-            message: format!("Dir.delete expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("Dir.delete arity checked before native dispatch"),
     }
 }

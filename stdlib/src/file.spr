@@ -7,14 +7,28 @@
 #
 class File {
   self {
+    # Returns true if path exists and is a directory.
+    #
+    #   File.directory?("tmp")   # true or false
+    #
     def directory?(path) { Dir.exist?(path) }
 
+    # Returns the final component of path, ignoring trailing slashes.
+    #
+    #   File.basename("/tmp/notes.txt")  # "notes.txt"
+    #   File.basename("/tmp/cache/")     # "cache"
+    #
     def basename(path) {
       path = self.trim_trailing_slashes(path)
       return "/" if path == "/"
       path.split("/").last
     }
 
+    # Returns all but the final component of path.
+    #
+    #   File.dirname("/tmp/notes.txt")  # "/tmp"
+    #   File.dirname("notes.txt")       # "."
+    #
     def dirname(path) {
       path = self.trim_trailing_slashes(path)
       return "/" if path == "/"
@@ -27,6 +41,11 @@ class File {
       if dir == "" { "/" } else { dir }
     }
 
+    # Returns the extension of path's basename, including the dot.
+    #
+    #   File.extname("notes.txt")  # ".txt"
+    #   File.extname("README")     # ""
+    #
     def extname(path) {
       name = self.basename(path)
       chars = name.chars
@@ -40,6 +59,10 @@ class File {
       ""
     }
 
+    # Removes trailing slashes while preserving the root slash.
+    #
+    #   File.trim_trailing_slashes("/tmp/cache/")  # "/tmp/cache"
+    #
     def trim_trailing_slashes(path) {
       while path.size > 1 && path.ends_with?("/") {
         path = path.slice(0, path.size - 1)

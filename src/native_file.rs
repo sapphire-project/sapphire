@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{HeapObject, NativeArity, VmError, VmValue, define_native_class_method};
+use crate::vm::{define_native_class_method, HeapObject, NativeArity, VmError, VmValue};
 use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
@@ -52,15 +52,10 @@ fn file_exist_q(
     line: u32,
 ) -> Result<VmValue, VmError> {
     match args {
-        [Str(path)] => Ok(VmValue::Bool(std::path::Path::new(path.as_str()).exists())),
-        [_] => Err(VmError::TypeError {
-            message: "File.exist?: path must be a string".to_string(),
-            line,
-        }),
-        _ => Err(VmError::TypeError {
-            message: format!("File.exist? expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        [arg] => Ok(VmValue::Bool(
+            Path::new(path_arg("File", "exist?", arg, line)?).exists(),
+        )),
+        _ => unreachable!("File.exist? arity checked before native dispatch"),
     }
 }
 
@@ -74,10 +69,7 @@ fn file_file_q(
         [arg] => Ok(VmValue::Bool(
             Path::new(path_arg("File", "file?", arg, line)?).is_file(),
         )),
-        _ => Err(VmError::TypeError {
-            message: format!("File.file? expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("File.file? arity checked before native dispatch"),
     }
 }
 
@@ -88,17 +80,13 @@ fn file_read(
     line: u32,
 ) -> Result<VmValue, VmError> {
     match args {
-        [Str(path)] => std::fs::read_to_string(path.as_str())
-            .map(Str)
-            .map_err(|e| VmError::Raised(Str(format!("{path}: {e}")))),
-        [_] => Err(VmError::TypeError {
-            message: "File.read: path must be a string".to_string(),
-            line,
-        }),
-        _ => Err(VmError::TypeError {
-            message: format!("File.read expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        [arg] => {
+            let path = path_arg("File", "read", arg, line)?;
+            std::fs::read_to_string(path)
+                .map(Str)
+                .map_err(|e| io_raised(path, e))
+        }
+        _ => unreachable!("File.read arity checked before native dispatch"),
     }
 }
 
@@ -115,10 +103,7 @@ fn file_delete(
                 .map(|_| VmValue::Nil)
                 .map_err(|e| io_raised(path, e))
         }
-        _ => Err(VmError::TypeError {
-            message: format!("File.delete expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("File.delete arity checked before native dispatch"),
     }
 }
 
@@ -136,10 +121,7 @@ fn file_rename(
                 .map(|_| VmValue::Nil)
                 .map_err(|e| io_raised(from, e))
         }
-        _ => Err(VmError::TypeError {
-            message: format!("File.rename expects 2 arguments, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("File.rename arity checked before native dispatch"),
     }
 }
 
@@ -157,10 +139,7 @@ fn file_size(
                 .len();
             Ok(VmValue::Int(len as i64))
         }
-        _ => Err(VmError::TypeError {
-            message: format!("File.size expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("File.size arity checked before native dispatch"),
     }
 }
 
@@ -183,10 +162,7 @@ fn file_mtime(
                 .as_secs();
             Ok(VmValue::Int(seconds as i64))
         }
-        _ => Err(VmError::TypeError {
-            message: format!("File.mtime expects 1 argument, got {}", args.len()),
-            line,
-        }),
+        _ => unreachable!("File.mtime arity checked before native dispatch"),
     }
 }
 
@@ -210,16 +186,21 @@ fn file_write(
     line: u32,
 ) -> Result<VmValue, VmError> {
     match args {
-        [Str(path), Str(content)] => std::fs::write(path.as_str(), content.as_str())
-            .map(|_| VmValue::Nil)
-            .map_err(|e| VmError::Raised(Str(format!("{path}: {e}")))),
-        [_, _] => Err(VmError::TypeError {
-            message: "File.write: path and content must be strings".to_string(),
-            line,
-        }),
-        _ => Err(VmError::TypeError {
-            message: format!("File.write expects 2 arguments, got {}", args.len()),
-            line,
-        }),
+        [path, content] => {
+            let path = path_arg("File", "write", path, line)?;
+            let content = match content {
+                Str(content) => content.as_str(),
+                _ => {
+                    return Err(VmError::TypeError {
+                        message: "File.write: content must be a string".to_string(),
+                        line,
+                    })
+                }
+            };
+            std::fs::write(path, content)
+                .map(|_| VmValue::Nil)
+                .map_err(|e| io_raised(path, e))
+        }
+        _ => unreachable!("File.write arity checked before native dispatch"),
     }
 }

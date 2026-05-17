@@ -6,6 +6,10 @@
 #
 class Dir {
   self {
+    # Returns directory entries including "." and "..".
+    #
+    #   Dir.entries("tmp")   # [".", "..", ...]
+    #
     def entries(path) {
       result = self.children(path)
       result.prepend("..")
@@ -13,6 +17,10 @@ class Dir {
       result
     }
 
+    # Creates path and any missing parent directories.
+    #
+    #   Dir.mkdir_p("tmp/cache")
+    #
     def mkdir_p(path) {
       return nil if self.exist?(path)
 
