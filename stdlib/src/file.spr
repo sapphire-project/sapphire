@@ -19,7 +19,9 @@ class File {
     #   File.basename("/tmp/cache/")     # "cache"
     #
     def basename(path) {
-      path = self.trim_trailing_slashes(path)
+      while path.size > 1 && path.ends_with?("/") {
+        path = path.slice(0, path.size - 1)
+      }
       return "/" if path == "/"
       path.split("/").last
     }
@@ -30,7 +32,9 @@ class File {
     #   File.dirname("notes.txt")       # "."
     #
     def dirname(path) {
-      path = self.trim_trailing_slashes(path)
+      while path.size > 1 && path.ends_with?("/") {
+        path = path.slice(0, path.size - 1)
+      }
       return "/" if path == "/"
 
       parts = path.split("/")
@@ -57,17 +61,6 @@ class File {
       }
 
       ""
-    }
-
-    # Removes trailing slashes while preserving the root slash.
-    #
-    #   File.trim_trailing_slashes("/tmp/cache/")  # "/tmp/cache"
-    #
-    defp trim_trailing_slashes(path) {
-      while path.size > 1 && path.ends_with?("/") {
-        path = path.slice(0, path.size - 1)
-      }
-      path
     }
   }
 }

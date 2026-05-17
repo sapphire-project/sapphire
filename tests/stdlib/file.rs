@@ -89,9 +89,9 @@ fn path_helpers() {
 }
 
 #[test]
-fn trim_trailing_slashes_is_private() {
+fn trim_trailing_slashes_is_not_part_of_api() {
     let err = eval_err(r#"File.trim_trailing_slashes("/tmp/cache/")"#);
     assert!(
-        matches!(err, sapphire::vm::VmError::TypeError { ref message, .. } if message.contains("private"))
+        matches!(err, sapphire::vm::VmError::TypeError { ref message, .. } if message.contains("unknown class method"))
     );
 }
