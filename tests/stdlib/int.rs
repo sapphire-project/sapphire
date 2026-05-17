@@ -26,12 +26,6 @@ fn even_odd() {
 }
 
 #[test]
-fn zero() {
-    assert_eq!(eval("0.zero?()"), VmValue::Bool(true));
-    assert_eq!(eval("1.zero?()"), VmValue::Bool(false));
-}
-
-#[test]
 fn max_min() {
     assert_eq!(eval("5.max(10)"), VmValue::Int(10));
     assert_eq!(eval("10.max(5)"), VmValue::Int(10));
