@@ -3,8 +3,7 @@
 # to get all?, any?, count, each_with_index, find, include?, map, none?,
 # partition, reduce, reject, select, sort_by, and zip.
 #
-# `count` totals elements (no block).  For how many match a predicate, use
-# `select { ... }.size`.  List and Set implement VM-native `reduce` with an
+# List and Set implement VM-native `reduce` with an
 # optional initial argument; other enumerables get `reduce` here (first element
 # is the seed; empty yields nil; one element returns it without calling the block).
 #
