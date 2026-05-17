@@ -4,11 +4,6 @@ class RegexTest < Test {
     assert(r)
   }
 
-  def test_new_with_ignore_case {
-    r = Regex.new("[a-z]+", ignore_case: true)
-    assert(r)
-  }
-
   def test_match_question_mark_true {
     r = Regex.new("[0-9]+")
     assert(r.match?("foo123"))

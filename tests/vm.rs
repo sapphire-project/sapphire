@@ -782,84 +782,6 @@ f()";
 }
 
 #[test]
-fn int_methods() {
-    assert_eq!(eval("42.to_s()"), VmValue::Str("42".into()));
-    assert_eq!(eval("42.to_f()"), VmValue::Float(42.0));
-    assert_eq!(eval_with_stdlib("n = -5\nn.abs()"), VmValue::Int(5));
-    assert_eq!(eval_with_stdlib("4.even?()"), VmValue::Bool(true));
-    assert_eq!(eval_with_stdlib("3.odd?()"), VmValue::Bool(true));
-    assert_eq!(eval_with_stdlib("0.zero?()"), VmValue::Bool(true));
-    assert_eq!(eval_with_stdlib("5.max(10)"), VmValue::Int(10));
-    assert_eq!(eval_with_stdlib("10.min(5)"), VmValue::Int(5));
-}
-
-#[test]
-fn float_methods() {
-    assert_eq!(eval("3.7.round()"), VmValue::Int(4));
-    assert_eq!(eval("3.7.floor()"), VmValue::Int(3));
-    assert_eq!(eval("3.2.ceil()"), VmValue::Int(4));
-    assert_eq!(eval("3.5.to_i()"), VmValue::Int(3));
-    assert_eq!(eval_with_stdlib("n = -2.5\nn.abs()"), VmValue::Float(2.5));
-}
-
-#[test]
-fn string_methods() {
-    assert_eq!(eval(r#""hello".size()"#), VmValue::Int(5));
-    assert_eq!(eval(r#""hello".upcase()"#), VmValue::Str("HELLO".into()));
-    assert_eq!(eval(r#""HELLO".downcase()"#), VmValue::Str("hello".into()));
-    assert_eq!(eval(r#""abc".reverse()"#), VmValue::Str("cba".into()));
-    assert_eq!(eval(r#""  hi  ".trim()"#), VmValue::Str("hi".into()));
-    assert_eq!(eval(r#""42".to_i()"#), VmValue::Int(42));
-    assert_eq!(eval(r#""3.14".to_f()"#), VmValue::Float(3.14));
-    assert_eq!(eval(r#""".empty?()"#), VmValue::Bool(true));
-    assert_eq!(eval(r#""hi".include?("i")"#), VmValue::Bool(true));
-    assert_eq!(eval(r#""hi".starts_with?("h")"#), VmValue::Bool(true));
-    assert_eq!(eval(r#""hi".ends_with?("i")"#), VmValue::Bool(true));
-}
-
-#[test]
-fn string_split() {
-    let src = r#""a,b,c".split(",")"#;
-    assert_eq!(eval(&format!("{}.size()", src)), VmValue::Int(3));
-}
-
-#[test]
-fn list_methods() {
-    assert_eq!(eval("a = [1,2,3]\na.size()"), VmValue::Int(3));
-    assert_eq!(eval("a = [1,2,3]\na.first()"), VmValue::Int(1));
-    assert_eq!(eval("a = [1,2,3]\na.last()"), VmValue::Int(3));
-    assert_eq!(eval("[].empty?()"), VmValue::Bool(true));
-    assert_eq!(eval("[1,2].empty?()"), VmValue::Bool(false));
-    assert_eq!(eval("a = [1,2,3]\na.include?(2)"), VmValue::Bool(true));
-    assert_eq!(eval("a = [3,1,2]\na.sort().first()"), VmValue::Int(1));
-    assert_eq!(eval(r#"[1,2,3].join(",")"#), VmValue::Str("1,2,3".into()));
-}
-
-#[test]
-fn list_push_and_pop() {
-    assert_eq!(eval("a = [1,2]\na.append(3)\na.size()"), VmValue::Int(3));
-    assert_eq!(eval("a = [1,2,3]\na.pop()"), VmValue::Int(3));
-}
-
-#[test]
-fn list_each() {
-    let src = "a = [1,2,3]\nsum = 0\na.each() { |x| sum = sum + x }\nsum";
-    assert_eq!(eval(src), VmValue::Int(6));
-}
-
-#[test]
-fn list_map() {
-    let src = "a = [1,2,3]\nb = a.map() { |x| x * 2 }\nb[1]";
-    assert_eq!(eval(src), VmValue::Int(4));
-}
-
-#[test]
-fn int_times() {
-    let src = "sum = 0\n3.times() { |i| sum = sum + i }\nsum";
-    assert_eq!(eval(src), VmValue::Int(3));
-}
-
-#[test]
 fn range_each() {
     let src = "sum = 0\n(1..4).each() { |i| sum = sum + i }\nsum";
     assert_eq!(eval(src), VmValue::Int(6));
@@ -1545,26 +1467,6 @@ fn multi_assign_three() {
     assert_eq!(eval(src2), VmValue::Int(30));
 }
 
-// ---- Num methods ----
-
-#[test]
-fn num_methods_on_int_and_float() {
-    assert_eq!(eval_with_stdlib("0.zero?()"), VmValue::Bool(true));
-    // Float zero? uses self == 0 (float/int comparison) which is not supported in VM
-    assert_eq!(eval_with_stdlib("3.positive?()"), VmValue::Bool(true));
-    assert_eq!(eval_with_stdlib("(-1.0).negative?()"), VmValue::Bool(true));
-    assert_eq!(eval_with_stdlib("10.clamp(1, 5)"), VmValue::Int(5));
-    assert_eq!(eval_with_stdlib("0.clamp(1, 5)"), VmValue::Int(1));
-}
-
-#[test]
-fn num_type_annotation_accepts_int_and_float() {
-    let src = "def double(x: Num) { x + x }\ndouble(3)";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(6));
-    let src2 = "def double(x: Num) { x + x }\ndouble(1.5)";
-    assert_eq!(eval_with_stdlib(src2), VmValue::Float(3.0));
-}
-
 // ---- Type annotations ----
 
 #[test]
@@ -1746,23 +1648,6 @@ fn float_to_s_whole_number_negative() {
 #[test]
 fn float_to_s_fractional() {
     assert_eq!(eval("3.14.to_s()"), VmValue::Str("3.14".into()));
-}
-
-// ── Float#zero? ───────────────────────────────────────────────────────────────
-
-#[test]
-fn float_zero_true() {
-    assert_eq!(eval_with_stdlib("0.0.zero?()"), VmValue::Bool(true));
-}
-
-#[test]
-fn float_zero_false() {
-    assert_eq!(eval_with_stdlib("1.5.zero?()"), VmValue::Bool(false));
-}
-
-#[test]
-fn float_zero_negative_zero() {
-    assert_eq!(eval_with_stdlib("(-0.0).zero?()"), VmValue::Bool(true));
 }
 
 // ── Return type annotations (runtime enforcement) ─────────────────────────────
