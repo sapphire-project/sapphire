@@ -63,7 +63,7 @@ class File {
     #
     #   File.trim_trailing_slashes("/tmp/cache/")  # "/tmp/cache"
     #
-    def trim_trailing_slashes(path) {
+    defp trim_trailing_slashes(path) {
       while path.size > 1 && path.ends_with?("/") {
         path = path.slice(0, path.size - 1)
       }
