@@ -1498,7 +1498,7 @@ impl Compiler {
                 self.emit(OpCode::GetLocal(elem_pos)); // [elem, elem_copy]
                 self.literal(low)?; // [elem, elem_copy, low]
                 self.emit(OpCode::GreaterEqual); // [elem, bool1] — copy consumed
-                // JumpIfFalse pops bool1 on both branches, leaving [elem] either way.
+                                                 // JumpIfFalse pops bool1 on both branches, leaving [elem] either way.
                 let first_fail = self.emit_jump(OpCode::JumpIfFalse(0));
                 // True path: [elem]  →  check elem <= high
                 self.literal(high)?; // [elem, high]
