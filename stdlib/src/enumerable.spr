@@ -1,6 +1,12 @@
 # Enumerable provides collection iteration helpers for any class that defines
 # `each` yielding single elements.  Include this module and implement `each`
-# to get all?, any?, each_with_index, map, none?, reject, select, and zip.
+# to get all?, any?, count, each_with_index, find, include?, map, none?,
+# partition, reduce, reject, select, sort_by, and zip.
+#
+# `count` totals elements (no block).  For how many match a predicate, use
+# `select { ... }.size`.  List and Set implement VM-native `reduce` with an
+# optional initial argument; other enumerables get `reduce` here (first element
+# is the seed; empty yields nil; one element returns it without calling the block).
 #
 module Enumerable {
   # Returns true if the block returns truthy for every element.
@@ -23,6 +29,41 @@ module Enumerable {
     found = false
     each { |x| if !found && yield(x) { found = true } }
     found
+  }
+
+  # Returns the number of elements (via `each`).  For a conditional count, use
+  # `select { ... }.size`.
+  #
+  def count {
+    n = 0
+    each { |x| n = n + 1 }
+    n
+  }
+
+  # Returns the first element for which the block is truthy, or nil.
+  # Scans the whole collection (no early exit) so nested native `each` does
+  # not break `yield` to the predicate block.
+  #
+  def find {
+    r = nil
+    each { |x|
+      if r == nil && yield(x) {
+        r = x
+      }
+    }
+    r
+  }
+
+  # Returns true if any element is `==` to `value`.
+  #
+  def include?(value) {
+    r = false
+    each { |x|
+      if !r && x == value {
+        r = true
+      }
+    }
+    r
   }
 
   # Yields each element with its zero-based index.
@@ -58,6 +99,34 @@ module Enumerable {
     no_match
   }
 
+  # Returns `[pass, fail]` where `pass` lists elements for which the block is
+  # truthy and `fail` the rest.  Both are new lists.
+  #
+  def partition {
+    pass = []
+    fail = []
+    each { |x| if yield(x) { pass.append(x) } else { fail.append(x) } }
+    [pass, fail]
+  }
+
+  # Folds left using the first element as the initial accumulator, then
+  # `yield(acc, x)` for each further element.  Empty collections yield nil; a
+  # single element is returned and the block is not called.
+  #
+  def reduce {
+    first = true
+    acc = nil
+    each { |x|
+      if first {
+        acc = x
+        first = false
+      } else {
+        acc = yield(acc, x)
+      }
+    }
+    acc
+  }
+
   # Returns a new list of elements for which the block returns falsy.
   #
   #   [1, 2, 3].reject { |x| x == 2 }   # [1, 3]
@@ -76,6 +145,37 @@ module Enumerable {
     result = []
     each { |x| result.append(x) if yield(x) }
     result
+  }
+
+  # Returns a new list sorted by `yield(x)` for each element (ascending `<` on
+  # keys).  List and Set use faster VM-native `sort_by` when available.
+  #
+  def sort_by {
+    xs = []
+    each { |x| xs.append(x) }
+    keys = xs.map { |x| yield(x) }
+    n = xs.size
+    i = 0
+    while i < n {
+      min_j = i
+      j = i + 1
+      while j < n {
+        if keys[j] < keys[min_j] {
+          min_j = j
+        }
+        j = j + 1
+      }
+      if min_j != i {
+        tmpk = keys[i]
+        keys[i] = keys[min_j]
+        keys[min_j] = tmpk
+        tmpx = xs[i]
+        xs[i] = xs[min_j]
+        xs[min_j] = tmpx
+      }
+      i = i + 1
+    }
+    xs
   }
 
   # Returns a new list of [self_element, other_element] pairs.

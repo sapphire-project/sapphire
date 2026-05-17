@@ -91,4 +91,51 @@ class ListTest < Test {
     assert_equal(3, result[2][0])
     assert_equal(6, result[2][1])
   }
+
+  def test_find_returns_first_match {
+    assert_equal(3, [1, 2, 3].find { |x| x > 2 })
+  }
+
+  def test_find_returns_nil_when_none {
+    assert_nil([1, 2, 3].find { |x| x > 9 })
+  }
+
+  def test_count_totals_elements {
+    assert_equal(3, [1, 2, 3].count)
+    assert_equal(0, [].count)
+  }
+
+  def test_reduce_without_initial {
+    assert_equal(6, [1, 2, 3].reduce { |a, b| a + b })
+  }
+
+  def test_reduce_with_initial {
+    assert_equal(10, [1, 2, 3].reduce(4) { |a, b| a + b })
+  }
+
+  def test_reduce_empty_without_initial {
+    assert_nil([].reduce { |a, b| a + b })
+  }
+
+  def test_reduce_single_element_skips_block {
+    assert_equal(42, [42].reduce { |a, b| a + b })
+  }
+
+  def test_partition_splits {
+    parts = [1, 2, 3, 4].partition { |x| x % 2 == 0 }
+    assert_equal(2, parts[0].size)
+    assert_equal(2, parts[1].size)
+    assert_equal(2, parts[0][0])
+    assert_equal(4, parts[0][1])
+    assert_equal(1, parts[1][0])
+    assert_equal(3, parts[1][1])
+  }
+
+  def test_sort_by_orders_by_key {
+    xs = [[2, "b"], [1, "a"], [3, "c"]]
+    ord = xs.sort_by { |p| p[0] }
+    assert_equal(1, ord[0][0])
+    assert_equal(2, ord[1][0])
+    assert_equal(3, ord[2][0])
+  }
 }
