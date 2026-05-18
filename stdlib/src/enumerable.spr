@@ -3,10 +3,6 @@
 # to get all?, any?, each_with_index, find, include?, map, none?,
 # partition, reduce, reject, select, sort_by, and zip.
 #
-# List and Set implement VM-native `reduce` with an
-# optional initial argument; other enumerables get `reduce` here (first element
-# is the seed; empty yields nil; one element returns it without calling the block).
-#
 module Enumerable {
   # Returns true if the block returns truthy for every element.
   # Returns true for an empty collection.
@@ -46,7 +42,7 @@ module Enumerable {
 
   # Returns true if any element is `==` to `value`.
   #
-  def include?(value) {
+  def include?(value) -> Bool {
     r = false
     each { |x|
       if !r && x == value {
