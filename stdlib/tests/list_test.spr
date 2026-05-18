@@ -100,11 +100,6 @@ class ListTest < Test {
     assert_nil([1, 2, 3].find { |x| x > 9 })
   }
 
-  def test_count_totals_elements {
-    assert_equal(3, [1, 2, 3].count)
-    assert_equal(0, [].count)
-  }
-
   def test_reduce_without_initial {
     assert_equal(6, [1, 2, 3].reduce { |a, b| a + b })
   }

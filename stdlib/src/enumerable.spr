@@ -1,6 +1,6 @@
 # Enumerable provides collection iteration helpers for any class that defines
 # `each` yielding single elements.  Include this module and implement `each`
-# to get all?, any?, count, each_with_index, find, include?, map, none?,
+# to get all?, any?, each_with_index, find, include?, map, none?,
 # partition, reduce, reject, select, sort_by, and zip.
 #
 # List and Set implement VM-native `reduce` with an
@@ -28,15 +28,6 @@ module Enumerable {
     found = false
     each { |x| if !found && yield(x) { found = true } }
     found
-  }
-
-  # Returns the number of elements (via `each`).  For a conditional count, use
-  # `select { ... }.size`.
-  #
-  def count {
-    n = 0
-    each { |x| n = n + 1 }
-    n
   }
 
   # Returns the first element for which the block is truthy, or nil.
