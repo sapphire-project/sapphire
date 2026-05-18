@@ -4,7 +4,6 @@
 #   r.options["verbose"]   # true if --verbose or -v (see below)
 #   r.options["out"]       # string value for --out=file or --out file
 #   r.options["debug"]     # false if --no-debug
-#   OptionParser.parse(...) is the same as CLI.parse (registered after stdlib loads; see vm.rs).
 #
 # Long options (after `--`): `--name`, `--name=value`, `--no-name` (false),
 # or `--name` followed by a separate token when the next token does not start

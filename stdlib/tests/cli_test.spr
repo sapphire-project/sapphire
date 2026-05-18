@@ -54,8 +54,4 @@ class CLITest < Test {
     assert(r.options["v"])
   }
 
-  def test_option_parser_alias {
-    r = OptionParser.parse(["--help"])
-    assert(r.options["help"])
-  }
 }

@@ -82,9 +82,4 @@ fn stdlib_defines_cli_global() {
         "expected CLI in globals, have: {:?}",
         keys
     );
-    assert!(
-        matches!(vm.globals.get("OptionParser"), Some(VmValue::Class { .. })),
-        "OptionParser global: {:?}",
-        vm.globals.get("OptionParser")
-    );
 }
