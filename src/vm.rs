@@ -1608,11 +1608,6 @@ impl Vm {
         if let Some(r) = cc.map_cls {
             self.globals.insert("Map".into(), VmValue::ClassObj(r));
         }
-        if let Some(cli) = self.globals.get("CLI").cloned() {
-            // `CLI` is only written to `globals` after stdlib sources run; register the Ruby-style
-            // alias here so `OptionParser.parse(...)` works without a late-bound `OptionParser = CLI`.
-            self.globals.insert("OptionParser".into(), cli);
-        }
         Ok(())
     }
 
