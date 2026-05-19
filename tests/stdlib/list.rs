@@ -68,18 +68,6 @@ fn each() {
 }
 
 #[test]
-fn reduce_with_initial() {
-    let src = "[1, 2, 3, 4, 5].reduce(0) { |acc, n| acc + n }";
-    assert_eq!(eval(src), VmValue::Int(15));
-}
-
-#[test]
-fn reduce_without_initial() {
-    let src = "[1, 2, 3, 4, 5].reduce() { |acc, n| acc * n }";
-    assert_eq!(eval(src), VmValue::Int(120));
-}
-
-#[test]
 fn flatten() {
     assert_eq!(
         eval("result = [[1, 2], [3, [4, 5]]].flatten()\nresult.size()"),

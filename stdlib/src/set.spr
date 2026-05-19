@@ -24,14 +24,4 @@ class Set {
     each { |x| result.add(x) if !yield(x) }
     result
   }
-
-  # Returns `[pass_set, fail_set]` like `Enumerable#partition`, but each side
-  # is a `Set` instead of a list.
-  #
-  def partition {
-    pass = Set.new
-    fail = Set.new
-    each { |x| if yield(x) { pass.add(x) } else { fail.add(x) } }
-    [pass, fail]
-  }
 }

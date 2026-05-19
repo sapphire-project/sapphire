@@ -4422,19 +4422,6 @@ impl Vm {
                         }
                         Ok(VmValue::Bool(true))
                     }
-                    "reduce" => {
-                        let items: Vec<VmValue> = self.get_list(r).clone();
-                        let mut acc = if args.is_empty() {
-                            items.first().cloned().unwrap_or(VmValue::Nil)
-                        } else {
-                            args[0].clone()
-                        };
-                        let skip = if args.is_empty() { 1 } else { 0 };
-                        for item in items.into_iter().skip(skip) {
-                            acc = self.call_block(&blk, vec![acc, item])?;
-                        }
-                        Ok(acc)
-                    }
                     "each_with_index" => {
                         let items: Vec<VmValue> = self.get_list(r).clone();
                         for (i, item) in items.into_iter().enumerate() {
@@ -4445,17 +4432,6 @@ impl Vm {
                             }
                         }
                         Ok(recv.clone())
-                    }
-                    "sort_by" => {
-                        let items: Vec<VmValue> = self.get_list(r).clone();
-                        let mut pairs: Vec<(VmValue, VmValue)> = Vec::with_capacity(items.len());
-                        for item in items {
-                            let key = self.call_block(&blk, vec![item.clone()])?;
-                            pairs.push((key, item));
-                        }
-                        pairs.sort_by(|(ka, _), (kb, _)| vm_value_partial_cmp(ka, kb));
-                        let out: Vec<VmValue> = pairs.into_iter().map(|(_, v)| v).collect();
-                        Ok(self.alloc_list(out))
                     }
                     _ => Err(VmError::TypeError {
                         message: format!("List has no block method '{}'", name),
@@ -4587,30 +4563,6 @@ impl Vm {
                             }
                         }
                         Ok(recv.clone())
-                    }
-                    "reduce" => {
-                        let items: Vec<VmValue> = self.get_set(r).clone();
-                        let mut acc = if args.is_empty() {
-                            items.first().cloned().unwrap_or(VmValue::Nil)
-                        } else {
-                            args[0].clone()
-                        };
-                        let skip = if args.is_empty() { 1 } else { 0 };
-                        for item in items.into_iter().skip(skip) {
-                            acc = self.call_block(&blk, vec![acc, item])?;
-                        }
-                        Ok(acc)
-                    }
-                    "sort_by" => {
-                        let items: Vec<VmValue> = self.get_set(r).clone();
-                        let mut pairs: Vec<(VmValue, VmValue)> = Vec::with_capacity(items.len());
-                        for item in items {
-                            let key = self.call_block(&blk, vec![item.clone()])?;
-                            pairs.push((key, item));
-                        }
-                        pairs.sort_by(|(ka, _), (kb, _)| vm_value_partial_cmp(ka, kb));
-                        let out: Vec<VmValue> = pairs.into_iter().map(|(_, v)| v).collect();
-                        Ok(self.alloc_list(out))
                     }
                     _ => Err(VmError::TypeError {
                         message: format!("Set has no block method '{}'", name),

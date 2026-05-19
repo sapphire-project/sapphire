@@ -60,7 +60,7 @@ numbers = [3, 1, 4, 1, 5, 9]
 
 doubled = numbers.map    { |n| n * 2 }
 evens   = numbers.select { |n| n % 2 == 0 }
-total   = numbers.reduce(0) { |acc, n| acc + n }
+total   = numbers.sum
 
 print doubled  #=> [6, 2, 8, 2, 10, 18]
 print evens    #=> [4]

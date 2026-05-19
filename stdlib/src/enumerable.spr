@@ -1,7 +1,7 @@
 # Enumerable provides collection iteration helpers for any class that defines
 # `each` yielding single elements.  Include this module and implement `each`
 # to get all?, any?, each_with_index, find, include?, map, none?,
-# partition, reduce, reject, select, sort_by, and zip.
+# reject, select, and zip.
 #
 module Enumerable {
   # Returns true if the block returns truthy for every element.
@@ -85,34 +85,6 @@ module Enumerable {
     no_match
   }
 
-  # Returns `[pass, fail]` where `pass` lists elements for which the block is
-  # truthy and `fail` the rest.  Both are new lists.
-  #
-  def partition {
-    pass = []
-    fail = []
-    each { |x| if yield(x) { pass.append(x) } else { fail.append(x) } }
-    [pass, fail]
-  }
-
-  # Folds left using the first element as the initial accumulator, then
-  # `yield(acc, x)` for each further element.  Empty collections yield nil; a
-  # single element is returned and the block is not called.
-  #
-  def reduce {
-    first = true
-    acc = nil
-    each { |x|
-      if first {
-        acc = x
-        first = false
-      } else {
-        acc = yield(acc, x)
-      }
-    }
-    acc
-  }
-
   # Returns a new list of elements for which the block returns falsy.
   #
   #   [1, 2, 3].reject { |x| x == 2 }   # [1, 3]
@@ -131,37 +103,6 @@ module Enumerable {
     result = []
     each { |x| result.append(x) if yield(x) }
     result
-  }
-
-  # Returns a new list sorted by `yield(x)` for each element (ascending `<` on
-  # keys).  List and Set use faster VM-native `sort_by` when available.
-  #
-  def sort_by {
-    xs = []
-    each { |x| xs.append(x) }
-    keys = xs.map { |x| yield(x) }
-    n = xs.size
-    i = 0
-    while i < n {
-      min_j = i
-      j = i + 1
-      while j < n {
-        if keys[j] < keys[min_j] {
-          min_j = j
-        }
-        j = j + 1
-      }
-      if min_j != i {
-        tmpk = keys[i]
-        keys[i] = keys[min_j]
-        keys[min_j] = tmpk
-        tmpx = xs[i]
-        xs[i] = xs[min_j]
-        xs[min_j] = tmpx
-      }
-      i = i + 1
-    }
-    xs
   }
 
   # Returns a new list of [self_element, other_element] pairs.
