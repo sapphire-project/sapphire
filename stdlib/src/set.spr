@@ -24,4 +24,8 @@ class Set {
     each { |x| result.add(x) if !yield(x) }
     result
   }
+
+  def reduce {
+    self.to_a.reduce { |a, b| yield(a, b) }
+  }
 }

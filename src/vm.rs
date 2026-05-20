@@ -4577,19 +4577,6 @@ impl Vm {
                         }
                         Ok(recv.clone())
                     }
-                    "reduce" => {
-                        let items: Vec<VmValue> = self.get_set(r).clone();
-                        let mut acc = if args.is_empty() {
-                            items.first().cloned().unwrap_or(VmValue::Nil)
-                        } else {
-                            args[0].clone()
-                        };
-                        let skip = if args.is_empty() { 1 } else { 0 };
-                        for item in items.into_iter().skip(skip) {
-                            acc = self.call_block(&blk, vec![acc, item])?;
-                        }
-                        Ok(acc)
-                    }
                     _ => Err(VmError::TypeError {
                         message: format!("Set has no block method '{}'", name),
                         line,
