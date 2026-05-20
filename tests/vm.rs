@@ -1135,6 +1135,18 @@ fn list_select() {
 }
 
 #[test]
+fn list_reduce_with_initial() {
+    let src = "[1, 2, 3, 4, 5].reduce(0) { |acc, n| acc + n }";
+    assert_eq!(eval_with_stdlib(src), VmValue::Int(15));
+}
+
+#[test]
+fn list_reduce_without_initial() {
+    let src = "[1, 2, 3, 4, 5].reduce() { |acc, n| acc * n }";
+    assert_eq!(eval_with_stdlib(src), VmValue::Int(120));
+}
+
+#[test]
 fn list_sort_full() {
     let src = "result = [3, 1, 4, 1, 5, 9, 2].sort()\nresult[0]";
     assert_eq!(eval(src), VmValue::Int(1));

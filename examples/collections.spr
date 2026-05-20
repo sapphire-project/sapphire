@@ -14,7 +14,7 @@ doubled.each { |n| print n }
 evens = numbers.select { |n| n % 2 == 0 }
 print "even count: #{evens.size}"
 
-total = numbers.sum
+total = numbers.reduce(0) { |acc, n| acc + n }
 print "sum: #{total}"
 
 sorted = numbers.sort

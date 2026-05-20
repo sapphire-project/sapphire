@@ -220,7 +220,7 @@ nums = [3, 1, 4, 1, 5, 9, 2, 6]
 
 doubled  = nums.map    { |n| n * 2 }
 big      = nums.select { |n| n > 4 }
-total    = nums.sum
+total    = nums.reduce(0) { |acc, n| acc + n }
 
 print doubled   # [6, 2, 8, 2, 10, 18, 4, 12]
 print big       # [5, 9, 6]
@@ -606,14 +606,9 @@ class Circle < Shape {
 def summarise(shapes) {
   shapes.each { |s| print s.describe }
 
-  total = 0.0
-  shapes.each { |s| total = total + s.area }
-
-  largest = shapes[0]
-  shapes.each { |s|
-    if s.area > largest.area {
-      largest = s
-    }
+  total = shapes.reduce(0.0) { |acc, s| acc + s.area }
+  largest = shapes.reduce(shapes[0]) { |best, s|
+    if s.area > best.area { s } else { best }
   }
 
   print "Total area:   #{total}"
