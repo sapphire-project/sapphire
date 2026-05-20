@@ -4386,24 +4386,6 @@ impl Vm {
                         }
                         Ok(self.alloc_list(out))
                     }
-                    "partition" => {
-                        let items: Vec<VmValue> = self.get_list(r).clone();
-                        let mut pass = Vec::new();
-                        let mut fail = Vec::new();
-                        for item in items {
-                            match self.call_block(&blk, vec![item.clone()]) {
-                                Err(VmError::Break(_)) => break,
-                                Err(e) => return Err(e),
-                                Ok(v) if !is_falsy(&v) => pass.push(item),
-                                Ok(_) => fail.push(item),
-                            }
-                        }
-                        let pair = vec![
-                            VmValue::List(self.heap.alloc(HeapObject::List(pass))),
-                            VmValue::List(self.heap.alloc(HeapObject::List(fail))),
-                        ];
-                        Ok(VmValue::List(self.heap.alloc(HeapObject::List(pair))))
-                    }
                     "any?" => {
                         let items: Vec<VmValue> = self.get_list(r).clone();
                         for item in items {
@@ -4463,17 +4445,6 @@ impl Vm {
                             }
                         }
                         Ok(recv.clone())
-                    }
-                    "sort_by" => {
-                        let items: Vec<VmValue> = self.get_list(r).clone();
-                        let mut pairs: Vec<(VmValue, VmValue)> = Vec::with_capacity(items.len());
-                        for item in items {
-                            let key = self.call_block(&blk, vec![item.clone()])?;
-                            pairs.push((key, item));
-                        }
-                        pairs.sort_by(|(ka, _), (kb, _)| vm_value_partial_cmp(ka, kb));
-                        let out: Vec<VmValue> = pairs.into_iter().map(|(_, v)| v).collect();
-                        Ok(self.alloc_list(out))
                     }
                     _ => Err(VmError::TypeError {
                         message: format!("List has no block method '{}'", name),
@@ -4606,24 +4577,6 @@ impl Vm {
                         }
                         Ok(recv.clone())
                     }
-                    "partition" => {
-                        let items: Vec<VmValue> = self.get_set(r).clone();
-                        let mut pass = Vec::new();
-                        let mut fail = Vec::new();
-                        for item in items {
-                            match self.call_block(&blk, vec![item.clone()]) {
-                                Err(VmError::Break(_)) => break,
-                                Err(e) => return Err(e),
-                                Ok(v) if !is_falsy(&v) => pass.push(item),
-                                Ok(_) => fail.push(item),
-                            }
-                        }
-                        let pair = vec![
-                            VmValue::Set(self.heap.alloc(HeapObject::Set(pass))),
-                            VmValue::Set(self.heap.alloc(HeapObject::Set(fail))),
-                        ];
-                        Ok(VmValue::List(self.heap.alloc(HeapObject::List(pair))))
-                    }
                     "reduce" => {
                         let items: Vec<VmValue> = self.get_set(r).clone();
                         let mut acc = if args.is_empty() {
@@ -4636,17 +4589,6 @@ impl Vm {
                             acc = self.call_block(&blk, vec![acc, item])?;
                         }
                         Ok(acc)
-                    }
-                    "sort_by" => {
-                        let items: Vec<VmValue> = self.get_set(r).clone();
-                        let mut pairs: Vec<(VmValue, VmValue)> = Vec::with_capacity(items.len());
-                        for item in items {
-                            let key = self.call_block(&blk, vec![item.clone()])?;
-                            pairs.push((key, item));
-                        }
-                        pairs.sort_by(|(ka, _), (kb, _)| vm_value_partial_cmp(ka, kb));
-                        let out: Vec<VmValue> = pairs.into_iter().map(|(_, v)| v).collect();
-                        Ok(self.alloc_list(out))
                     }
                     _ => Err(VmError::TypeError {
                         message: format!("Set has no block method '{}'", name),
