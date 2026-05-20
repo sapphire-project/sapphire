@@ -74,11 +74,27 @@ module Enumerable {
     result
   }
 
-  # Folds the collection, starting from `initial`.  The block receives the
-  # accumulator and each element.
+  # Folds the collection.  With no argument, the first element is the seed;
+  # with `initial`, folding starts from that value.  Returns nil for an empty
+  # collection when called without an initial.
   #
-  #   [1, 2, 3, 4].reduce(0) { |acc, n| acc + n }   # 10
+  #   [1, 2, 3, 4].reduce { |acc, n| acc * n }        # 24
+  #   [1, 2, 3, 4].reduce(0) { |acc, n| acc + n }     # 10
   #
+  def reduce {
+    acc = nil
+    started = false
+    each { |x|
+      if !started {
+        acc = x
+        started = true
+      } else {
+        acc = yield(acc, x)
+      }
+    }
+    acc
+  }
+
   def reduce(initial) {
     acc = initial
     each { |x| acc = yield(acc, x) }

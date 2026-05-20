@@ -121,4 +121,11 @@ class EnumerableTest < Test {
     assert_equal(3, w.reduce(0) { |acc, s| acc + s.size })
   }
 
+  def test_custom_reduce_without_initial {
+    w = Words.new
+    w.push("a")
+    w.push("bb")
+    assert_equal(2, w.reduce() { |acc, s| acc.size * s.size })
+  }
+
 }
