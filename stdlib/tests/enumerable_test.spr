@@ -113,4 +113,12 @@ class EnumerableTest < Test {
     assert(w.include?("x"))
     assert(!w.include?("z"))
   }
+
+  def test_custom_reduce_with_initial {
+    w = Words.new
+    w.push("a")
+    w.push("bb")
+    assert_equal(3, w.reduce(0) { |acc, s| acc + s.size })
+  }
+
 }
