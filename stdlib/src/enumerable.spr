@@ -1,6 +1,7 @@
 # Enumerable provides collection iteration helpers for any class that defines
 # `each` yielding single elements.  Include this module and implement `each`
-# to get all?, any?, each_with_index, map, none?, reject, select, and zip.
+# to get all?, any?, each_with_index, find, include?, map, none?,
+# reject, select, and zip.
 #
 module Enumerable {
   # Returns true if the block returns truthy for every element.
@@ -23,6 +24,32 @@ module Enumerable {
     found = false
     each { |x| if !found && yield(x) { found = true } }
     found
+  }
+
+  # Returns the first element for which the block is truthy, or nil.
+  # Scans the whole collection (no early exit) so nested native `each` does
+  # not break `yield` to the predicate block.
+  #
+  def find {
+    r = nil
+    each { |x|
+      if r == nil && yield(x) {
+        r = x
+      }
+    }
+    r
+  }
+
+  # Returns true if any element is `==` to `value`.
+  #
+  def include?(value) -> Bool {
+    r = false
+    each { |x|
+      if !r && x == value {
+        r = true
+      }
+    }
+    r
   }
 
   # Yields each element with its zero-based index.

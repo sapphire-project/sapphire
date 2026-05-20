@@ -93,4 +93,24 @@ class EnumerableTest < Test {
     assert_equal(0, indices[0])
     assert_equal(1, indices[1])
   }
+
+  def test_custom_find {
+    w = Words.new
+    w.push("a")
+    w.push("hello")
+    assert_equal("hello", w.find { |s| s.size > 1 })
+  }
+
+  def test_custom_find_nil {
+    w = Words.new
+    w.push("a")
+    assert_nil(w.find { |s| s.size > 5 })
+  }
+
+  def test_custom_include {
+    w = Words.new
+    w.push("x")
+    assert(w.include?("x"))
+    assert(!w.include?("z"))
+  }
 }
