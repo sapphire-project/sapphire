@@ -386,8 +386,8 @@ pub enum VmValue {
         /// Abstract instance method names not yet implemented (for concrete classes that omit methods).
         remaining_abstract: Vec<String>,
         fields: Vec<(String, VmValue)>,
-        methods: Rc<MethodTable>,
-        class_methods: Rc<MethodTable>,
+        methods: Rc<HashMap<String, VmMethod>>,
+        class_methods: Rc<HashMap<String, VmMethod>>,
         /// Nested class definitions, accessible as `Outer.Inner`.
         namespace: Rc<HashMap<String, VmValue>>,
     },
@@ -397,7 +397,7 @@ pub enum VmValue {
         #[allow(dead_code)]
         ancestor_chain: Rc<Vec<String>>,
         fields: GcRef,
-        methods: Rc<MethodTable>,
+        methods: Rc<HashMap<String, VmMethod>>,
     },
     /// A heap-allocated class object in the Ruby-style object model.
     ClassObj(GcRef),
@@ -412,35 +412,6 @@ pub struct VmMethod {
     /// Name of the class this method was defined in; empty for block closures.
     pub defined_in: String,
     pub private: bool,
-}
-
-/// Instance/class method table; multiple entries per name when arity differs.
-pub type MethodTable = HashMap<String, Vec<VmMethod>>;
-
-fn method_table_push(table: &mut MethodTable, name: String, method: VmMethod) {
-    let arity = method.function.arity;
-    let entry = table.entry(name).or_default();
-    if let Some(slot) = entry.iter_mut().find(|m| m.function.arity == arity) {
-        *slot = method;
-    } else {
-        entry.push(method);
-    }
-}
-
-fn method_table_get(table: &MethodTable, name: &str, arg_count: usize) -> Option<VmMethod> {
-    table
-        .get(name)?
-        .iter()
-        .find(|m| m.function.arity == arg_count)
-        .cloned()
-}
-
-fn method_table_merge(dst: &mut MethodTable, src: &MethodTable) {
-    for (name, methods) in src {
-        for m in methods {
-            method_table_push(dst, name.clone(), m.clone());
-        }
-    }
 }
 
 impl PartialEq for VmValue {
@@ -629,9 +600,9 @@ struct ClassEntry {
     /// The merged (inherited + own) field list with default values.
     fields: Vec<(String, VmValue)>,
     /// Merged (inherited + own) instance methods.
-    methods: Rc<MethodTable>,
+    methods: Rc<HashMap<String, VmMethod>>,
     /// Merged (inherited + own) class methods.
-    class_methods: Rc<MethodTable>,
+    class_methods: Rc<HashMap<String, VmMethod>>,
     /// Constants defined in the class body (e.g. `PI = 3.14`).
     namespace: Rc<HashMap<String, VmValue>>,
 }
@@ -2004,13 +1975,12 @@ impl Vm {
                     let (class_closures, rest) = all_values.split_at(n_class);
                     let (instance_closures, nested_values) = rest.split_at(method_names.len());
 
-                    let mut own_class_methods: MethodTable = HashMap::new();
+                    let mut own_class_methods: HashMap<String, VmMethod> = HashMap::new();
                     for (mname, closure) in class_method_names.iter().zip(class_closures) {
                         match closure {
                             VmValue::Closure { function, upvalues } => {
                                 let private = class_private_methods.contains(mname);
-                                method_table_push(
-                                    &mut own_class_methods,
+                                own_class_methods.insert(
                                     mname.clone(),
                                     VmMethod {
                                         function: function.clone(),
@@ -2023,13 +1993,12 @@ impl Vm {
                             _ => panic!("DefClass: class method is not a closure"),
                         }
                     }
-                    let mut own_methods: MethodTable = HashMap::new();
+                    let mut own_methods: HashMap<String, VmMethod> = HashMap::new();
                     for (mname, closure) in method_names.iter().zip(instance_closures) {
                         match closure {
                             VmValue::Closure { function, upvalues } => {
                                 let private = private_methods.contains(mname);
-                                method_table_push(
-                                    &mut own_methods,
+                                own_methods.insert(
                                     mname.clone(),
                                     VmMethod {
                                         function: function.clone(),
@@ -2103,13 +2072,20 @@ impl Vm {
                                         message: format!("module '{}' not found", mname),
                                         line,
                                     })?;
-                                method_table_merge(&mut merged_methods, &mentry.methods);
-                                method_table_merge(&mut merged_class_methods, &mentry.class_methods);
+                                merged_methods.extend(
+                                    mentry.methods.iter().map(|(k, v)| (k.clone(), v.clone())),
+                                );
+                                merged_class_methods.extend(
+                                    mentry
+                                        .class_methods
+                                        .iter()
+                                        .map(|(k, v)| (k.clone(), v.clone())),
+                                );
                             }
                         }
                     }
-                    method_table_merge(&mut merged_methods, &own_methods);
-                    method_table_merge(&mut merged_class_methods, &own_class_methods);
+                    merged_methods.extend(own_methods);
+                    merged_class_methods.extend(own_class_methods);
                     let mut remaining_abstract: Vec<String> = Vec::new();
                     if let Some(ref sname) = effective_super
                         && let Some(p) = self.classes.get(sname)
@@ -2147,23 +2123,21 @@ impl Vm {
                     // Mirror bytecode methods into the bootstrapped ClassObject if
                     // this is a core class (Object, Class, Set, …).
                     if let Some(class_obj_ref) = self.find_core_class_obj(&class_name) {
-                        for (mname, vm_methods) in merged_rc.iter() {
-                            for vm_method in vm_methods {
-                                if let HeapObject::ClassObject { methods, .. } =
-                                    self.heap.get_mut(class_obj_ref)
+                        for (mname, vm_method) in merged_rc.iter() {
+                            if let HeapObject::ClassObject { methods, .. } =
+                                self.heap.get_mut(class_obj_ref)
+                            {
+                                // Bootstrapped natives (e.g. Set#to_s) win over inherited
+                                // bytecode from Object unless this class defines its own method.
+                                if matches!(methods.get(mname), Some(SapphireMethod::Native { .. }))
+                                    && vm_method.defined_in != class_name
                                 {
-                                    // Bootstrapped natives (e.g. Set#to_s) win over inherited
-                                    // bytecode from Object unless this class defines its own method.
-                                    if matches!(methods.get(mname), Some(SapphireMethod::Native { .. }))
-                                        && vm_method.defined_in != class_name
-                                    {
-                                        continue;
-                                    }
-                                    methods.insert(
-                                        mname.clone(),
-                                        SapphireMethod::Bytecode(vm_method.clone()),
-                                    );
+                                    continue;
                                 }
+                                methods.insert(
+                                    mname.clone(),
+                                    SapphireMethod::Bytecode(vm_method.clone()),
+                                );
                             }
                         }
                     }
@@ -2397,7 +2371,7 @@ impl Vm {
                         ref other => {
                             let method = primitive_class_name(other)
                                 .and_then(|cls| self.classes.get(cls))
-                                .and_then(|entry| method_table_get(&entry.methods, &name, 0));
+                                .and_then(|entry| entry.methods.get(&name).cloned());
                             match method {
                                 Some(m) => {
                                     let recv_slot = self.stack.len();
@@ -2622,7 +2596,7 @@ impl Vm {
                         ..
                     } = self.stack[recv_slot].clone()
                     {
-                        let method_opt = method_table_get(class_methods, &method_name, arg_count);
+                        let method_opt = class_methods.get(&method_name).cloned();
                         if let Some(method) = method_opt {
                             if method.private {
                                 let caller_class = self
@@ -2876,9 +2850,7 @@ impl Vm {
                         } else if method_name == "instance_method_names" && arg_count == 0 {
                             let mut names: Vec<VmValue> = methods
                                 .iter()
-                                .filter(|(_, overloads)| {
-                                    overloads.iter().any(|m| !m.private)
-                                })
+                                .filter(|(_, m)| !m.private)
                                 .map(|(k, _)| VmValue::Str(k.clone()))
                                 .collect();
                             names.sort_by(vm_value_partial_cmp);
@@ -2984,9 +2956,7 @@ impl Vm {
                         // Look in the class registry (stdlib bytecode on primitives).
                         let method = primitive_class_name(&recv)
                             .and_then(|cls| self.classes.get(cls))
-                            .and_then(|entry| {
-                                method_table_get(&entry.methods, &method_name, arg_count)
-                            });
+                            .and_then(|entry| entry.methods.get(&method_name).cloned());
                         match method {
                             Some(m) => {
                                 if m.private {
@@ -3004,6 +2974,15 @@ impl Vm {
                                             line,
                                         });
                                     }
+                                }
+                                if m.function.arity != arg_count {
+                                    return Err(VmError::TypeError {
+                                        message: format!(
+                                            "method '{}' expects {} arg(s), got {}",
+                                            method_name, m.function.arity, arg_count
+                                        ),
+                                        line,
+                                    });
                                 }
                                 check_param_types(
                                     &m.function,
@@ -3047,7 +3026,7 @@ impl Vm {
                             fields,
                             ..
                         } => (
-                            method_table_get(methods, &method_name, arg_count),
+                            methods.get(&method_name).cloned(),
                             class_name.clone(),
                             *fields,
                         ),
@@ -3260,14 +3239,17 @@ impl Vm {
                                 line,
                             })?;
                     let method = match self.classes.get(&super_name) {
-                        Some(entry) => method_table_get(&entry.methods, &method_name, arg_count)
-                            .ok_or_else(|| VmError::TypeError {
-                                message: format!(
-                                    "ancestor '{}' has no method '{}'",
-                                    super_name, method_name
-                                ),
-                                line,
-                            })?,
+                        Some(entry) => {
+                            entry.methods.get(&method_name).cloned().ok_or_else(|| {
+                                VmError::TypeError {
+                                    message: format!(
+                                        "ancestor '{}' has no method '{}'",
+                                        super_name, method_name
+                                    ),
+                                    line,
+                                }
+                            })?
+                        }
                         None => {
                             return Err(VmError::TypeError {
                                 message: format!("ancestor '{}' not in registry", super_name),
@@ -3489,7 +3471,6 @@ impl Vm {
                         if let Some(start) = self.class_object_for_primitive(&recv)
                             && let Some(SapphireMethod::Bytecode(m)) =
                                 self.lookup_class_object_method(start, &method_name)
-                            && m.function.arity == arg_count
                         {
                             if m.private {
                                 let caller_class = self
@@ -3506,6 +3487,15 @@ impl Vm {
                                         line,
                                     });
                                 }
+                            }
+                            if m.function.arity != arg_count {
+                                return Err(VmError::TypeError {
+                                    message: format!(
+                                        "method '{}' expects {} arg(s), got {}",
+                                        method_name, m.function.arity, arg_count
+                                    ),
+                                    line,
+                                });
                             }
                             check_param_types(
                                 &m.function,
@@ -3529,9 +3519,7 @@ impl Vm {
                         // Native didn't handle it — try the class registry.
                         let method = primitive_class_name(&recv)
                             .and_then(|cls| self.classes.get(cls))
-                            .and_then(|entry| {
-                                method_table_get(&entry.methods, &method_name, arg_count)
-                            });
+                            .and_then(|entry| entry.methods.get(&method_name).cloned());
                         match method {
                             Some(m) => {
                                 // Stack is still [..., recv, args...]; leave it for the frame.
@@ -3569,15 +3557,13 @@ impl Vm {
                     }
 
                     let method = match &self.stack[recv_slot] {
-                        VmValue::Instance { methods, .. } => method_table_get(
-                            methods,
-                            &method_name,
-                            arg_count,
-                        )
-                        .ok_or_else(|| VmError::TypeError {
-                            message: format!("method '{}' not found", method_name),
-                            line,
-                        })?,
+                        VmValue::Instance { methods, .. } => methods
+                            .get(&method_name)
+                            .cloned()
+                            .ok_or_else(|| VmError::TypeError {
+                                message: format!("method '{}' not found", method_name),
+                                line,
+                            })?,
                         _ => unreachable!(),
                     };
                     if method.private {
@@ -3595,6 +3581,15 @@ impl Vm {
                                 line,
                             });
                         }
+                    }
+                    if method.function.arity != arg_count {
+                        return Err(VmError::TypeError {
+                            message: format!(
+                                "method '{}' expects {} arg(s), got {}",
+                                method_name, method.function.arity, arg_count
+                            ),
+                            line,
+                        });
                     }
                     check_param_types(
                         &method.function,
@@ -4655,10 +4650,8 @@ impl Vm {
                 .methods
                 .iter()
                 .filter(|(name, _)| name.starts_with("test_"))
-                .filter_map(|(name, methods)| {
-                    methods.first().map(|method| {
-                        (name.trim_start_matches("test_").to_string(), method.clone())
-                    })
+                .map(|(name, method)| {
+                    (name.trim_start_matches("test_").to_string(), method.clone())
                 })
                 .collect();
             tests.sort_by(|a, b| a.0.cmp(&b.0));
@@ -4726,16 +4719,16 @@ impl Vm {
         };
 
         // Call setup if defined and not the base no-op from Test itself.
-        if let Some(setup) = method_table_get(&methods, "setup", 0) {
-            self.call_method_on_instance(instance.clone(), &setup)?;
+        if let Some(setup) = methods.get("setup") {
+            self.call_method_on_instance(instance.clone(), setup)?;
         }
 
         // Run the test.
         self.call_method_on_instance(instance.clone(), test_method)?;
 
         // Call teardown if defined.
-        if let Some(teardown) = method_table_get(&methods, "teardown", 0) {
-            self.call_method_on_instance(instance.clone(), &teardown)?;
+        if let Some(teardown) = methods.get("teardown") {
+            self.call_method_on_instance(instance.clone(), teardown)?;
         }
 
         Ok(())
