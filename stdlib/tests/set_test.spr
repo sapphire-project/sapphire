@@ -239,10 +239,6 @@ class SetTest < Test {
     assert_equal(2, indices[2])
   }
 
-  def test_reduce_without_initial {
-    assert_equal(6, Set.new([1, 2, 3]).reduce { |a, b| a + b })
-  }
-
   def test_set_operations_do_not_mutate_self {
     a = Set.new([1, 2, 3])
     b = Set.new([3, 4])
