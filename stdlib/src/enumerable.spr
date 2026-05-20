@@ -1,7 +1,6 @@
 # Enumerable provides collection iteration helpers for any class that defines
 # `each` yielding single elements.  Include this module and implement `each`
-# to get all?, any?, each_with_index, find, include?, map, none?, reduce,
-# reject, select, and zip.
+# to get all enumerable methods.
 #
 module Enumerable {
   # Returns true if the block returns truthy for every element.
@@ -74,27 +73,11 @@ module Enumerable {
     result
   }
 
-  # Folds the collection.  With no argument, the first element is the seed;
-  # with `initial`, folding starts from that value.  Returns nil for an empty
-  # collection when called without an initial.
+  # Folds the collection, starting from `initial`.  The block receives the
+  # accumulator and each element.
   #
-  #   [1, 2, 3, 4].reduce { |acc, n| acc * n }        # 24
-  #   [1, 2, 3, 4].reduce(0) { |acc, n| acc + n }     # 10
+  #   [1, 2, 3, 4].reduce(0) { |acc, n| acc + n }   # 10
   #
-  def reduce {
-    acc = nil
-    started = false
-    each { |x|
-      if !started {
-        acc = x
-        started = true
-      } else {
-        acc = yield(acc, x)
-      }
-    }
-    acc
-  }
-
   def reduce(initial) {
     acc = initial
     each { |x| acc = yield(acc, x) }
