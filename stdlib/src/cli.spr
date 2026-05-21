@@ -20,21 +20,6 @@ class CLI {
   }
 
   self {
-    def split_first_eq(s) {
-      if !s.include?("=") {
-        return [s, nil]
-      }
-      i = 0
-      n = s.size
-      while (i < n) {
-        if s.slice(i, 1) == "=" {
-          return [s.slice(0, i), s.slice(i + 1, n - i - 1)]
-        }
-        i = i + 1
-      }
-      [s, nil]
-    }
-
     def parse(argv) {
       opts = {}
       rest = []
@@ -78,6 +63,21 @@ class CLI {
         }
       }
       ArgvParseResult.new(options: opts, rest: rest)
+    }
+
+    defp split_first_eq(s) {
+      if !s.include?("=") {
+        return [s, nil]
+      }
+      i = 0
+      n = s.size
+      while (i < n) {
+        if s.slice(i, 1) == "=" {
+          return [s.slice(0, i), s.slice(i + 1, n - i - 1)]
+        }
+        i = i + 1
+      }
+      [s, nil]
     }
   }
 }
