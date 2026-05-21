@@ -77,10 +77,7 @@ class CLI {
           i = i + 1
         }
       }
-      r = ArgvParseResult.new
-      r.options = opts
-      r.rest = rest
-      r
+      ArgvParseResult.new(options: opts, rest: rest)
     }
   }
 }
