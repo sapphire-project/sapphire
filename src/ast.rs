@@ -37,6 +37,7 @@ pub enum TypeExpr {
 pub struct ParamDef {
     pub name: String,
     pub type_ann: Option<TypeExpr>,
+    pub default: Option<Expr>,
 }
 
 #[derive(Debug, Clone)]

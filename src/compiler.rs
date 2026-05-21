@@ -1,4 +1,4 @@
-use crate::ast::{Block, Expr, MatchArm, MethodDef, Pattern, RescueClause, StringPart, TypeExpr};
+use crate::ast::{Block, Expr, MatchArm, MethodDef, ParamDef, Pattern, RescueClause, StringPart, TypeExpr};
 use crate::chunk::{Chunk, Constant, Function, OpCode, RuntimeType, UpvalueDef};
 use crate::token::TokenKind;
 use crate::value::Value;
@@ -53,6 +53,42 @@ fn suggest_name<'a>(name: &str, candidates: &[&'a str]) -> Option<&'a str> {
         .map(|(c, _)| c)
 }
 
+/// Returns (required_arity, param_defaults) for a parameter list, or a CompileError if
+/// defaults are invalid (non-literal, or required param follows optional).
+fn param_defaults(params: &[ParamDef], line: u32, col: u32) -> Result<(usize, Vec<Option<Value>>), CompileError> {
+    let mut required_arity = 0;
+    let mut defaults: Vec<Option<Value>> = Vec::with_capacity(params.len());
+    let mut seen_optional = false;
+    for p in params {
+        match &p.default {
+            None => {
+                if seen_optional {
+                    return Err(CompileError {
+                        message: format!("required parameter '{}' cannot follow optional parameter", p.name),
+                        line,
+                        column: col,
+                    });
+                }
+                required_arity += 1;
+                defaults.push(None);
+            }
+            Some(expr) => {
+                seen_optional = true;
+                let val = match expr {
+                    Expr::Literal(v) => v.clone(),
+                    _ => return Err(CompileError {
+                        message: format!("default value for '{}' must be a literal (int, float, string, bool, or nil)", p.name),
+                        line,
+                        column: col,
+                    }),
+                };
+                defaults.push(Some(val));
+            }
+        }
+    }
+    Ok((required_arity, defaults))
+}
+
 // ── Per-function compiler state ───────────────────────────────────────────────
 
 struct LocalInfo {
@@ -82,6 +118,8 @@ struct FunctionState {
     upvalue_defs: Vec<UpvalueInfo>,
     name: String,
     arity: usize,
+    required_arity: usize,
+    param_defaults: Vec<Option<Value>>,
     /// When compiling a class/instance method, the method name for bare `super`.
     super_method_name: Option<String>,
     /// Stack of active while-loop contexts, innermost last.
@@ -100,6 +138,8 @@ impl FunctionState {
             upvalue_defs: Vec::new(),
             name: name.to_string(),
             arity,
+            required_arity: arity,
+            param_defaults: Vec::new(),
             super_method_name: None,
             loop_stack: Vec::new(),
             return_type: None,
@@ -254,6 +294,8 @@ impl Compiler {
         Rc::new(Function {
             name: state.name,
             arity: state.arity,
+            required_arity: state.required_arity,
+            param_defaults: state.param_defaults,
             super_method_name: state.super_method_name,
             chunk: state.chunk,
             upvalue_defs: state
@@ -937,11 +979,15 @@ impl Compiler {
                 body,
             } => {
                 let line = self.state().current_line;
+                let col = self.state().current_column;
                 let arity = params.len();
+                let (required_arity, defaults) = param_defaults(params, line, col)?;
                 let fn_tvars: std::collections::HashSet<String> =
                     type_params.iter().cloned().collect();
 
                 self.push_fn(name, arity, line);
+                self.state_mut().required_arity = required_arity;
+                self.state_mut().param_defaults = defaults;
                 self.state_mut().return_type = return_type.as_ref().and_then(|te| {
                     let erased = erase_type_vars(&self.resolve_type_expr(te), &fn_tvars);
                     self.type_expr_runtime(Some(&erased))
@@ -1803,7 +1849,11 @@ impl Compiler {
         // Slot 0 = `self` (the class object), not counted in arity.
         for method in &class_methods {
             let arity = method.params.len();
+            let col = self.state().current_column;
+            let (required_arity, defaults) = param_defaults(&method.params, line, col)?;
             self.push_fn(&method.name, arity, line);
+            self.state_mut().required_arity = required_arity;
+            self.state_mut().param_defaults = defaults;
             self.state_mut().super_method_name = Some(method.name.clone());
             let all_tvars: std::collections::HashSet<String> = class_tvars
                 .iter()
@@ -1846,7 +1896,11 @@ impl Compiler {
         // Emit instance method closures (concrete only).
         for method in &concrete_instance {
             let arity = method.params.len();
+            let col = self.state().current_column;
+            let (required_arity, defaults) = param_defaults(&method.params, line, col)?;
             self.push_fn(&method.name, arity, line);
+            self.state_mut().required_arity = required_arity;
+            self.state_mut().param_defaults = defaults;
             self.state_mut().super_method_name = Some(method.name.clone());
             let all_tvars: std::collections::HashSet<String> = class_tvars
                 .iter()

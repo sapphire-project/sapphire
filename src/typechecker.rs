@@ -371,6 +371,7 @@ impl TypeChecker {
                         .type_ann
                         .as_ref()
                         .map(|te| Self::substitute_type(te, substitutions)),
+                    default: param.default.clone(),
                 })
                 .collect(),
             return_type: sig

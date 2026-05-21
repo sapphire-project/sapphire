@@ -9,6 +9,8 @@ fn run(chunk: Chunk) -> Result<Option<VmValue>, VmError> {
     let f = Rc::new(Function {
         name: String::new(),
         arity: 0,
+        required_arity: 0,
+        param_defaults: vec![],
         super_method_name: None,
         chunk,
         upvalue_defs: vec![],
