@@ -1,0 +1,83 @@
+# Lightweight command-line parsing for scripts using `Process.args`.
+#
+#   r = CLI.parse(Process.args)
+#   r.options["verbose"]   # true if --verbose or -v (see below)
+#   r.options["out"]       # string value for --out=file or --out file
+#   r.options["debug"]     # false if --no-debug
+#
+# Long options (after `--`): `--name`, `--name=value`, `--no-name` (false),
+# or `--name` followed by a separate token when the next token does not start
+# with `-`. A bare `--` ends option parsing; everything after is positional.
+#
+# Short flags: each character after a single `-` sets a one-character string
+# key to true (for example `-x` or `-xv`). A lone `-` is treated as a
+# positional argument.
+#
+class CLI {
+  class ArgvParseResult {
+    attr options
+    attr rest
+  }
+
+  self {
+    def parse(argv) {
+      opts = {}
+      rest = []
+      i = 0
+      while (i < argv.size) {
+        arg = argv[i]
+        if !arg.starts_with?("-") || arg == "-" {
+          rest.append(arg)
+          i = i + 1
+        } elsif (arg.size == 2 && arg.slice(0, 1) == "-" && arg.slice(1, 1) == "-") {
+          j = i + 1
+          while (j < argv.size) {
+            rest.append(argv[j])
+            j = j + 1
+          }
+          break
+        } elsif (arg.starts_with?("--")) {
+          inner = arg.slice(2, arg.size - 2)
+          nv = self.split_first_eq(inner)
+          name = nv[0]
+          v = nv[1]
+          no_prefix = name.size > 3 && name.slice(0, 1) == "n" && name.slice(1, 1) == "o" && name.slice(2, 1) == "-"
+          if v != nil {
+            opts[name] = v
+            i = i + 1
+          } elsif no_prefix {
+            k = name.slice(3, name.size - 3)
+            opts[k] = false
+            i = i + 1
+          } elsif (i + 1) < argv.size && !argv[i + 1].starts_with?("-") {
+            opts[name] = argv[i + 1]
+            i = i + 2
+          } else {
+            opts[name] = true
+            i = i + 1
+          }
+        } else {
+          body = arg.slice(1, arg.size - 1)
+          body.chars.each { |ch| opts[ch] = true }
+          i = i + 1
+        }
+      }
+      ArgvParseResult.new(options: opts, rest: rest)
+    }
+
+    defp split_first_eq(s) {
+      if !s.include?("=") {
+        return [s, nil]
+      }
+      i = 0
+      n = s.size
+      while (i < n) {
+        if s.slice(i, 1) == "=" {
+          return [s.slice(0, i), s.slice(i + 1, n - i - 1)]
+        }
+        i = i + 1
+      }
+      [s, nil]
+    }
+  }
+}

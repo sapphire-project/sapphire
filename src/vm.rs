@@ -1517,6 +1517,7 @@ impl Vm {
                 "stdlib/process.spr",
                 include_str!("../stdlib/src/process.spr"),
             ),
+            ("stdlib/cli.spr", include_str!("../stdlib/src/cli.spr")),
             ("stdlib/math.spr", include_str!("../stdlib/src/math.spr")),
             (
                 "stdlib/duration.spr",
