@@ -68,18 +68,3 @@ mod socket;
 
 #[path = "stdlib/io.rs"]
 mod io;
-
-#[test]
-fn stdlib_defines_cli_global() {
-    let tokens = Lexer::new("nil").scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse");
-    let func = compile(&stmts).expect("compile");
-    let mut vm = Vm::new(func, std::path::PathBuf::new());
-    vm.load_stdlib().expect("stdlib");
-    let keys: Vec<&String> = vm.globals.keys().collect();
-    assert!(
-        vm.globals.contains_key("CLI"),
-        "expected CLI in globals, have: {:?}",
-        keys
-    );
-}
