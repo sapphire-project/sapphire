@@ -1,6 +1,7 @@
 # Lightweight command-line parsing for scripts using `Process.args`.
 #
-#   r = CLI.parse(Process.args)
+#   r = CLI.parse                    # uses Process.args
+#   r = CLI.parse_argv(custom)       # explicit argv list (e.g. tests)
 #   r.options["verbose"]   # true if --verbose or -v (see below)
 #   r.options["out"]       # string value for --out=file or --out file
 #   r.options["debug"]     # false if --no-debug
@@ -20,7 +21,11 @@ class CLI {
   }
 
   self {
-    def parse(argv) {
+    def parse {
+      self.parse_argv(Process.args)
+    }
+
+    def parse_argv(argv) {
       opts = {}
       rest = []
       i = 0

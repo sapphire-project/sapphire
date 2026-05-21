@@ -1,12 +1,12 @@
 class CLITest < Test {
   def test_empty_argv {
-    r = CLI.parse([])
+    r = CLI.parse_argv([])
     assert_equal(0, r.rest.size)
     assert_equal(0, r.options.size)
   }
 
   def test_positional_only {
-    r = CLI.parse(["a", "b"])
+    r = CLI.parse_argv(["a", "b"])
     assert_equal(2, r.rest.size)
     assert_equal("a", r.rest[0])
     assert_equal("b", r.rest[1])
@@ -14,34 +14,34 @@ class CLITest < Test {
   }
 
   def test_lone_dash_is_positional {
-    r = CLI.parse(["-"])
+    r = CLI.parse_argv(["-"])
     assert_equal(1, r.rest.size)
     assert_equal("-", r.rest[0])
   }
 
   def test_long_flag {
-    r = CLI.parse(["--verbose"])
+    r = CLI.parse_argv(["--verbose"])
     assert(r.options["verbose"])
     assert_equal(0, r.rest.size)
   }
 
   def test_long_equals_value {
-    r = CLI.parse(["--out=tmp.txt"])
+    r = CLI.parse_argv(["--out=tmp.txt"])
     assert_equal("tmp.txt", r.options["out"])
   }
 
   def test_long_value_next_token {
-    r = CLI.parse(["--out", "tmp.txt"])
+    r = CLI.parse_argv(["--out", "tmp.txt"])
     assert_equal("tmp.txt", r.options["out"])
   }
 
   def test_no_prefix_false {
-    r = CLI.parse(["--no-debug"])
+    r = CLI.parse_argv(["--no-debug"])
     assert_equal(false, r.options["debug"])
   }
 
   def test_double_dash_rest {
-    r = CLI.parse(["--verbose", "--", "-x", "file"])
+    r = CLI.parse_argv(["--verbose", "--", "-x", "file"])
     assert(r.options["verbose"])
     assert_equal(2, r.rest.size)
     assert_equal("-x", r.rest[0])
@@ -49,7 +49,7 @@ class CLITest < Test {
   }
 
   def test_short_flags {
-    r = CLI.parse(["-xv"])
+    r = CLI.parse_argv(["-xv"])
     assert(r.options["x"])
     assert(r.options["v"])
   }
