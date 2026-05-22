@@ -70,3 +70,34 @@ fn chars() {
     assert_eq!(eval(r#""hi".chars()[0]"#), VmValue::Str("h".into()));
     assert_eq!(eval(r#""hi".chars()[1]"#), VmValue::Str("i".into()));
 }
+
+#[test]
+fn equality() {
+    assert_eq!(eval(r#""a" == "a""#), VmValue::Bool(true));
+    assert_eq!(eval(r#""a" == "b""#), VmValue::Bool(false));
+}
+
+#[test]
+fn escape_newline() {
+    assert_eq!(eval(r#""\n""#), VmValue::Str("\n".into()));
+}
+
+#[test]
+fn escape_tab() {
+    assert_eq!(eval(r#""\t""#), VmValue::Str("\t".into()));
+}
+
+#[test]
+fn escape_backslash() {
+    assert_eq!(eval(r#""\\""#), VmValue::Str("\\".into()));
+}
+
+#[test]
+fn escape_quote() {
+    assert_eq!(eval(r#""\"""#), VmValue::Str("\"".into()));
+}
+
+#[test]
+fn escape_in_interpolation() {
+    assert_eq!(eval(r#""a\nb""#), VmValue::Str("a\nb".into()));
+}
