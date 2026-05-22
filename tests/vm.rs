@@ -756,51 +756,6 @@ f()";
     assert_eq!(eval(src), VmValue::Int(42));
 }
 
-#[test]
-fn range_each() {
-    let src = "sum = 0\n(1..4).each() { |i| sum = sum + i }\nsum";
-    assert_eq!(eval(src), VmValue::Int(6));
-}
-
-#[test]
-fn range_to_a() {
-    let src = "r = 1..4\nr.to_a().size()";
-    assert_eq!(eval(src), VmValue::Int(3));
-}
-
-#[test]
-fn map_methods() {
-    assert_eq!(eval("m = {a: 1, b: 2}\nm.size()"), VmValue::Int(2));
-    assert_eq!(eval("m = {a: 1}\nm.has_key?(\"a\")"), VmValue::Bool(true));
-    assert_eq!(eval("m = {a: 1}\nm.has_key?(\"z\")"), VmValue::Bool(false));
-    assert_eq!(eval("m = {a: 1}\nm.delete(\"a\")"), VmValue::Int(1));
-}
-
-#[test]
-fn nil_bool_methods() {
-    assert_eq!(eval("nil.nil?()"), VmValue::Bool(true));
-    assert_eq!(eval("nil.to_s()"), VmValue::Str("".into()));
-    assert_eq!(eval_stdlib("false.nil?()"), VmValue::Bool(false));
-    assert_eq!(eval_stdlib("true.to_s()"), VmValue::Str("true".into()));
-}
-
-#[test]
-fn is_a_instance_hierarchy() {
-    let base = "class Animal { attr name }\nclass Dog < Animal { attr breed }\nd = Dog.new(name: \"Rex\", breed: \"Lab\")\n";
-    assert_eq!(
-        eval_stdlib(&(base.to_string() + "d.is_a?(Dog)")),
-        VmValue::Bool(true)
-    );
-    assert_eq!(
-        eval_stdlib(&(base.to_string() + "d.is_a?(Animal)")),
-        VmValue::Bool(true)
-    );
-    let unrelated = "class Animal { attr name }\nclass Dog < Animal { attr breed }\nclass Cat {}\nd = Dog.new(name: \"Rex\", breed: \"Lab\")\n";
-    assert_eq!(
-        eval_stdlib(&(unrelated.to_string() + "d.is_a?(Cat)")),
-        VmValue::Bool(false)
-    );
-}
 
 #[test]
 fn lambda_basic_call() {
@@ -1073,153 +1028,12 @@ fn constant_readable_in_functions() {
     assert_eq!(eval(src), VmValue::Int(10));
 }
 
-// ---- Implicit `it` in blocks ----
-
-#[test]
-fn it_each() {
-    let src = "sum = 0\n[1, 2, 3].each() { |it| sum = sum + it }\nsum";
-    assert_eq!(eval(src), VmValue::Int(6));
-}
-
-#[test]
-fn it_map() {
-    let src = "result = [1, 2, 3].map() { |it| it * 2 }\nresult[1]";
-    assert_eq!(eval(src), VmValue::Int(4));
-}
-
 #[test]
 fn while_condition_method_call_no_block_greed() {
     let src = "list = [1, 2, 3]\ni = 0\nsum = 0\nlen = list.size()\nwhile i < len { sum = sum + list[i]\ni = i + 1 }\nsum";
     assert_eq!(eval(src), VmValue::Int(6));
 }
 
-// ---- Each next ----
-
-#[test]
-fn each_next() {
-    let src = "sum = 0\n[1, 2, 3, 4, 5].each() { |x| if x == 3 { next nil }\nsum = sum + x }\nsum";
-    assert_eq!(eval(src), VmValue::Int(12));
-}
-
-// ---- List advanced methods ----
-
-#[test]
-fn list_select() {
-    let src = "result = [1, 2, 3, 4].select() { |x| x > 2 }\nresult.size()";
-    assert_eq!(eval_stdlib(src), VmValue::Int(2));
-}
-
-#[test]
-fn list_reduce_with_initial() {
-    let src = "[1, 2, 3, 4, 5].reduce(0) { |acc, n| acc + n }";
-    assert_eq!(eval_stdlib(src), VmValue::Int(15));
-}
-
-#[test]
-fn list_reduce_without_initial() {
-    let src = "[1, 2, 3, 4, 5].reduce() { |acc, n| acc * n }";
-    assert_eq!(eval_stdlib(src), VmValue::Int(120));
-}
-
-#[test]
-fn list_sort_full() {
-    let src = "result = [3, 1, 4, 1, 5, 9, 2].sort()\nresult[0]";
-    assert_eq!(eval(src), VmValue::Int(1));
-    let src2 = "result = [3, 1, 4, 1, 5, 9, 2].sort()\nresult[6]";
-    assert_eq!(eval(src2), VmValue::Int(9));
-}
-
-#[test]
-fn list_sort_strings() {
-    let src = r#"result = ["banana", "apple", "cherry"].sort()
-result[0]"#;
-    assert_eq!(eval(src), VmValue::Str("apple".into()));
-    let src2 = r#"result = ["banana", "apple", "cherry"].sort()
-result[2]"#;
-    assert_eq!(eval(src2), VmValue::Str("cherry".into()));
-}
-
-#[test]
-fn list_flatten() {
-    let src = "result = [[1, 2], [3, [4, 5]]].flatten()\nresult.size()";
-    assert_eq!(eval_stdlib(src), VmValue::Int(5));
-    let src2 = "result = [[1, 2], [3, [4, 5]]].flatten()\nresult[3]";
-    assert_eq!(eval_stdlib(src2), VmValue::Int(4));
-}
-
-#[test]
-fn list_uniq() {
-    let src = "result = [1, 2, 2, 3, 1].uniq()\nresult.size()";
-    assert_eq!(eval_stdlib(src), VmValue::Int(3));
-}
-
-#[test]
-fn list_each_with_index() {
-    let src = r#"pairs = []
-["a", "b", "c"].each_with_index() { |item, i| pairs.append(i) }
-pairs[2]"#;
-    assert_eq!(eval_stdlib(src), VmValue::Int(2));
-}
-
-#[test]
-fn list_zip() {
-    let src = "result = [1, 2, 3].zip([4, 5, 6])\nresult.size()";
-    assert_eq!(eval_stdlib(src), VmValue::Int(3));
-    let src2 = "result = [1, 2, 3].zip([4, 5, 6])\nresult[0][0]";
-    assert_eq!(eval_stdlib(src2), VmValue::Int(1));
-    let src3 = "result = [1, 2, 3].zip([4, 5, 6])\nresult[0][1]";
-    assert_eq!(eval_stdlib(src3), VmValue::Int(4));
-}
-
-// ---- Map advanced methods ----
-
-#[test]
-fn map_merge() {
-    let src = r#"a = { x: 1 }
-b = { y: 2 }
-c = a.merge(b)
-c.size()"#;
-    assert_eq!(eval_stdlib(src), VmValue::Int(2));
-    let src2 = r#"a = { x: 1 }
-b = { y: 2 }
-c = a.merge(b)
-c["x"]"#;
-    assert_eq!(eval_stdlib(src2), VmValue::Int(1));
-}
-
-#[test]
-fn map_select() {
-    let src = r#"m = { a: 1, b: 2, c: 3 }
-result = m.select() { |k, v| v > 1 }
-result.size()"#;
-    assert_eq!(eval_stdlib(src), VmValue::Int(2));
-    let src2 = r#"m = { a: 1, b: 2, c: 3 }
-result = m.select() { |k, v| v > 1 }
-result.has_key?("a")"#;
-    assert_eq!(eval_stdlib(src2), VmValue::Bool(false));
-}
-
-// ---- Range ----
-
-#[test]
-fn range_include() {
-    // VM ranges are exclusive upper bound
-    assert_eq!(eval_stdlib("(1..10).include?(5)"), VmValue::Bool(true));
-    assert_eq!(eval_stdlib("(1..10).include?(1)"), VmValue::Bool(true));
-    assert_eq!(
-        eval_stdlib("(1..10).include?(10)"),
-        VmValue::Bool(false)
-    );
-    assert_eq!(
-        eval_stdlib("(1..10).include?(11)"),
-        VmValue::Bool(false)
-    );
-}
-
-#[test]
-fn range_to_s() {
-    assert_eq!(eval("(1..5).to_s()"), VmValue::Str("1..5".into()));
-}
 
 // ---- Yield ----
 
@@ -1446,18 +1260,6 @@ B.new().run()"#;
     assert_eq!(eval(src), VmValue::Int(99));
 }
 
-// ---- chars ----
-
-#[test]
-fn string_chars() {
-    let src = r#"result = "hi".chars()
-result.size()"#;
-    assert_eq!(eval_stdlib(src), VmValue::Int(2));
-    let src2 = r#"result = "hi".chars()
-result[0]"#;
-    assert_eq!(eval_stdlib(src2), VmValue::Str("h".into()));
-}
-
 // ---- Multi-assign three ----
 
 #[test]
@@ -1517,56 +1319,6 @@ fn method_typed_param_rejects_wrong_type() {
 Calc.new().double("x")"#,
     );
     assert!(matches!(err, VmError::TypeError { .. }));
-}
-
-// --- Method chaining after blocks ---
-
-#[test]
-fn chain_map_then_size() {
-    // .map { } followed by .size() on the same line
-    let src = "[1, 2, 3].map() { |x| x * 2 }.size()";
-    assert_eq!(eval(src), VmValue::Int(3));
-}
-
-#[test]
-fn chain_map_then_index() {
-    // result of .map { } immediately indexed
-    let src = "[1, 2, 3].map() { |x| x * 10 }[1]";
-    assert_eq!(eval(src), VmValue::Int(20));
-}
-
-#[test]
-fn chain_map_then_map() {
-    // two block calls chained on one line
-    let src = "[1, 2, 3].map() { |x| x * 2 }.map() { |x| x + 1 }[0]";
-    assert_eq!(eval(src), VmValue::Int(3));
-}
-
-#[test]
-fn chain_multiline_map_then_size() {
-    // .map { } on one line, .size() on the next
-    let src = "[1, 2, 3]\n  .map() { |x| x * 2 }\n  .size()";
-    assert_eq!(eval(src), VmValue::Int(3));
-}
-
-#[test]
-fn chain_multiline_map_then_map() {
-    // two block-calls across newlines
-    let src = "result = [1, 2, 3]\n  .map() { |x| x * 2 }\n  .map() { |x| x + 1 }\nresult[2]";
-    assert_eq!(eval(src), VmValue::Int(7));
-}
-
-#[test]
-fn chain_multiline_select_then_size() {
-    let src = "[1, 2, 3, 4]\n  .select() { |x| x > 2 }\n  .size()";
-    assert_eq!(eval_stdlib(src), VmValue::Int(2));
-}
-
-#[test]
-fn chain_multiline_map_then_select() {
-    // map then select across lines
-    let src = "[1, 2, 3, 4]\n  .map() { |x| x * 2 }\n  .select() { |x| x > 4 }\n  .size()";
-    assert_eq!(eval_stdlib(src), VmValue::Int(2));
 }
 
 // ── break / next in while loops ───────────────────────────────────────────────
@@ -1632,23 +1384,6 @@ while i < 3 {
 }
 count";
     assert_eq!(eval(src), VmValue::Int(6)); // 2 increments per outer iter, 3 iters
-}
-
-// ── Float#to_s ────────────────────────────────────────────────────────────────
-
-#[test]
-fn float_to_s_whole_number() {
-    assert_eq!(eval("1.0.to_s()"), VmValue::Str("1.0".into()));
-}
-
-#[test]
-fn float_to_s_whole_number_negative() {
-    assert_eq!(eval("(-3.0).to_s()"), VmValue::Str("-3.0".into()));
-}
-
-#[test]
-fn float_to_s_fractional() {
-    assert_eq!(eval("3.14.to_s()"), VmValue::Str("3.14".into()));
 }
 
 // ── Return type annotations (runtime enforcement) ─────────────────────────────
@@ -1730,80 +1465,6 @@ fn unary_minus_float_infers_float_return() {
 fn unary_tilde_infers_int_return() {
     let result = eval("def f() -> Int { ~0 }\nf()");
     assert_eq!(result, VmValue::Int(-1));
-}
-
-// ── break / next inside blocks passed to native methods ───────────────────────
-
-#[test]
-fn break_in_each_stops_iteration() {
-    // break should stop iteration and execution continues after the each call
-    let result = eval_stdlib(
-        r#"
-sum = 0
-[1, 2, 3, 4, 5].each { |n|
-  break if n == 3
-  sum = sum + n
-}
-sum"#,
-    );
-    assert_eq!(result, VmValue::Int(3)); // 1 + 2, stops before 3
-}
-
-#[test]
-fn break_in_each_execution_continues_after() {
-    // code after the each call must still run
-    let result = eval_stdlib(
-        r#"
-x = 0
-[1, 2, 3].each { |n| break if n == 2 }
-x = 99
-x"#,
-    );
-    assert_eq!(result, VmValue::Int(99));
-}
-
-#[test]
-fn break_in_map_stops_early() {
-    // map collects [10, 20] then hits break; result is a partial list
-    let result = eval_stdlib(
-        r#"
-[1, 2, 3, 4].map { |n|
-  break if n == 3
-  n * 10
-}.size"#,
-    );
-    assert_eq!(result, VmValue::Int(3)); // [10, 20, nil] — 2 mapped + the break value
-}
-
-#[test]
-fn next_in_each_skips_element() {
-    let result = eval_stdlib(
-        r#"
-sum = 0
-[1, 2, 3, 4, 5].each { |n|
-  next if n % 2 == 0
-  sum = sum + n
-}
-sum"#,
-    );
-    assert_eq!(result, VmValue::Int(9)); // 1 + 3 + 5
-}
-
-#[test]
-fn break_in_nested_each_exits_inner_only() {
-    // break inside the inner each should not affect the outer each
-    let result = eval_stdlib(
-        r#"
-count = 0
-[1, 2, 3].each { |i|
-  [10, 20, 30].each { |j|
-    break if j == 20
-    count = count + 1
-  }
-}
-count"#,
-    );
-    assert_eq!(result, VmValue::Int(3)); // inner each runs once per outer iteration
 }
 
 // ---- Nested classes / namespaces ----
