@@ -11,6 +11,8 @@ use std::fmt;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+mod test_api;
+
 fn runtime_type_display(rt: &RuntimeType) -> String {
     match rt {
         RuntimeType::Named(n) => n.clone(),
@@ -2641,12 +2643,18 @@ impl Vm {
                                     });
                                 }
                             }
-                            if arg_count < method.function.required_arity || arg_count > method.function.arity {
-                                let expected = if method.function.required_arity == method.function.arity {
-                                    format!("{}", method.function.arity)
-                                } else {
-                                    format!("{} to {}", method.function.required_arity, method.function.arity)
-                                };
+                            if arg_count < method.function.required_arity
+                                || arg_count > method.function.arity
+                            {
+                                let expected =
+                                    if method.function.required_arity == method.function.arity {
+                                        format!("{}", method.function.arity)
+                                    } else {
+                                        format!(
+                                            "{} to {}",
+                                            method.function.required_arity, method.function.arity
+                                        )
+                                    };
                                 return Err(VmError::TypeError {
                                     message: format!(
                                         "class method '{}' expects {} arg(s), got {}",
@@ -2658,7 +2666,8 @@ impl Vm {
                             self.push_param_defaults(&method.function, arg_count);
                             check_param_types(
                                 &method.function,
-                                &mut self.stack[recv_slot + 1..recv_slot + 1 + method.function.arity],
+                                &mut self.stack
+                                    [recv_slot + 1..recv_slot + 1 + method.function.arity],
                                 line,
                             )?;
                             self.frames.push(CallFrame {
@@ -2733,12 +2742,18 @@ impl Vm {
                                             });
                                         }
                                     }
-                                    if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                        let expected = if m.function.required_arity == m.function.arity {
-                                            format!("{}", m.function.arity)
-                                        } else {
-                                            format!("{} to {}", m.function.required_arity, m.function.arity)
-                                        };
+                                    if arg_count < m.function.required_arity
+                                        || arg_count > m.function.arity
+                                    {
+                                        let expected =
+                                            if m.function.required_arity == m.function.arity {
+                                                format!("{}", m.function.arity)
+                                            } else {
+                                                format!(
+                                                    "{} to {}",
+                                                    m.function.required_arity, m.function.arity
+                                                )
+                                            };
                                         return Err(VmError::TypeError {
                                             message: format!(
                                                 "class method '{}' expects {} arg(s), got {}",
@@ -2750,7 +2765,8 @@ impl Vm {
                                     self.push_param_defaults(&m.function, arg_count);
                                     check_param_types(
                                         &m.function,
-                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                        &mut self.stack
+                                            [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                         line,
                                     )?;
                                     self.frames.push(CallFrame {
@@ -2962,12 +2978,18 @@ impl Vm {
                                             });
                                         }
                                     }
-                                    if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                        let expected = if m.function.required_arity == m.function.arity {
-                                            format!("{}", m.function.arity)
-                                        } else {
-                                            format!("{} to {}", m.function.required_arity, m.function.arity)
-                                        };
+                                    if arg_count < m.function.required_arity
+                                        || arg_count > m.function.arity
+                                    {
+                                        let expected =
+                                            if m.function.required_arity == m.function.arity {
+                                                format!("{}", m.function.arity)
+                                            } else {
+                                                format!(
+                                                    "{} to {}",
+                                                    m.function.required_arity, m.function.arity
+                                                )
+                                            };
                                         return Err(VmError::TypeError {
                                             message: format!(
                                                 "method '{}' expects {} arg(s), got {}",
@@ -2979,7 +3001,8 @@ impl Vm {
                                     self.push_param_defaults(&m.function, arg_count);
                                     check_param_types(
                                         &m.function,
-                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                        &mut self.stack
+                                            [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                         line,
                                     )?;
                                     let class_name = Some(m.defined_in.clone());
@@ -3020,11 +3043,17 @@ impl Vm {
                                         });
                                     }
                                 }
-                                if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                    let expected = if m.function.required_arity == m.function.arity {
+                                if arg_count < m.function.required_arity
+                                    || arg_count > m.function.arity
+                                {
+                                    let expected = if m.function.required_arity == m.function.arity
+                                    {
                                         format!("{}", m.function.arity)
                                     } else {
-                                        format!("{} to {}", m.function.required_arity, m.function.arity)
+                                        format!(
+                                            "{} to {}",
+                                            m.function.required_arity, m.function.arity
+                                        )
                                     };
                                     return Err(VmError::TypeError {
                                         message: format!(
@@ -3037,7 +3066,8 @@ impl Vm {
                                 self.push_param_defaults(&m.function, arg_count);
                                 check_param_types(
                                     &m.function,
-                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                    &mut self.stack
+                                        [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                     line,
                                 )?;
                                 // recv and args are already on the stack at recv_slot..
@@ -3174,12 +3204,18 @@ impl Vm {
                                 });
                             }
                         }
-                        if arg_count < method.function.required_arity || arg_count > method.function.arity {
-                            let expected = if method.function.required_arity == method.function.arity {
-                                format!("{}", method.function.arity)
-                            } else {
-                                format!("{} to {}", method.function.required_arity, method.function.arity)
-                            };
+                        if arg_count < method.function.required_arity
+                            || arg_count > method.function.arity
+                        {
+                            let expected =
+                                if method.function.required_arity == method.function.arity {
+                                    format!("{}", method.function.arity)
+                                } else {
+                                    format!(
+                                        "{} to {}",
+                                        method.function.required_arity, method.function.arity
+                                    )
+                                };
                             return Err(VmError::TypeError {
                                 message: format!(
                                     "method '{}' expects {} arg(s), got {}",
@@ -3314,11 +3350,16 @@ impl Vm {
                             });
                         }
                     };
-                    if arg_count < method.function.required_arity || arg_count > method.function.arity {
+                    if arg_count < method.function.required_arity
+                        || arg_count > method.function.arity
+                    {
                         let expected = if method.function.required_arity == method.function.arity {
                             format!("{}", method.function.arity)
                         } else {
-                            format!("{} to {}", method.function.required_arity, method.function.arity)
+                            format!(
+                                "{} to {}",
+                                method.function.required_arity, method.function.arity
+                            )
                         };
                         return Err(VmError::TypeError {
                             message: format!(
@@ -3557,7 +3598,8 @@ impl Vm {
                                     });
                                 }
                             }
-                            if arg_count < m.function.required_arity || arg_count > m.function.arity {
+                            if arg_count < m.function.required_arity || arg_count > m.function.arity
+                            {
                                 let expected = if m.function.required_arity == m.function.arity {
                                     format!("{}", m.function.arity)
                                 } else {
@@ -3597,11 +3639,17 @@ impl Vm {
                             .and_then(|entry| entry.methods.get(&method_name).cloned());
                         match method {
                             Some(m) => {
-                                if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                    let expected = if m.function.required_arity == m.function.arity {
+                                if arg_count < m.function.required_arity
+                                    || arg_count > m.function.arity
+                                {
+                                    let expected = if m.function.required_arity == m.function.arity
+                                    {
                                         format!("{}", m.function.arity)
                                     } else {
-                                        format!("{} to {}", m.function.required_arity, m.function.arity)
+                                        format!(
+                                            "{} to {}",
+                                            m.function.required_arity, m.function.arity
+                                        )
                                     };
                                     return Err(VmError::TypeError {
                                         message: format!(
@@ -3614,7 +3662,8 @@ impl Vm {
                                 self.push_param_defaults(&m.function, arg_count);
                                 check_param_types(
                                     &m.function,
-                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                    &mut self.stack
+                                        [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                     line,
                                 )?;
                                 let class_name = Some(m.defined_in.clone());
@@ -3671,11 +3720,16 @@ impl Vm {
                             });
                         }
                     }
-                    if arg_count < method.function.required_arity || arg_count > method.function.arity {
+                    if arg_count < method.function.required_arity
+                        || arg_count > method.function.arity
+                    {
                         let expected = if method.function.required_arity == method.function.arity {
                             format!("{}", method.function.arity)
                         } else {
-                            format!("{} to {}", method.function.required_arity, method.function.arity)
+                            format!(
+                                "{} to {}",
+                                method.function.required_arity, method.function.arity
+                            )
                         };
                         return Err(VmError::TypeError {
                             message: format!(
@@ -4731,38 +4785,6 @@ impl Vm {
 
     // ── Test runner ───────────────────────────────────────────────────────────
 
-    /// Return all subclasses of `Test` (excluding `Test` itself) together with
-    /// the list of their test methods (names starting with `test_`).
-    /// Each entry is `(class_name, Vec<(test_label, VmMethod)>)` where
-    /// `test_label` is the method name with the `test_` prefix stripped.
-    pub fn collect_test_classes(&self) -> Vec<(String, Vec<(String, VmMethod)>)> {
-        let mut result = Vec::new();
-        let mut names: Vec<&String> = self.classes.keys().collect();
-        names.sort();
-        for class_name in names {
-            if class_name == "Test" {
-                continue;
-            }
-            if !vm_is_subclass(&self.classes, class_name.as_str(), "Test") {
-                continue;
-            }
-            let entry = &self.classes[class_name];
-            let mut tests: Vec<(String, VmMethod)> = entry
-                .methods
-                .iter()
-                .filter(|(name, _)| name.starts_with("test_"))
-                .map(|(name, method)| {
-                    (name.trim_start_matches("test_").to_string(), method.clone())
-                })
-                .collect();
-            tests.sort_by(|a, b| a.0.cmp(&b.0));
-            if !tests.is_empty() {
-                result.push((class_name.clone(), tests));
-            }
-        }
-        result
-    }
-
     /// Call a single method on an instance without disturbing the existing
     /// stack.  Returns `Err(message)` if the method raises or there is a VM
     /// error.
@@ -4791,14 +4813,30 @@ impl Vm {
         result.map(|_| ()).map_err(|e| e.to_string())
     }
 
-    /// Run a single test: build a fresh instance of `class_name`, call
-    /// `setup`, run `test_method`, call `teardown`.  Returns `Ok(())` on
-    /// success or `Err(message)` if any step raises.
-    pub fn run_single_test(
+    fn sorted_class_names(&self) -> Vec<&String> {
+        let mut names: Vec<&String> = self.classes.keys().collect();
+        names.sort();
+        names
+    }
+
+    fn test_methods_for_class(&self, class_name: &str) -> Vec<(String, VmMethod)> {
+        let Some(entry) = self.classes.get(class_name) else {
+            return vec![];
+        };
+        let mut tests: Vec<(String, VmMethod)> = entry
+            .methods
+            .iter()
+            .filter(|(name, _)| name.starts_with("test_"))
+            .map(|(name, method)| (name.trim_start_matches("test_").to_string(), method.clone()))
+            .collect();
+        tests.sort_by(|a, b| a.0.cmp(&b.0));
+        tests
+    }
+
+    fn build_test_instance(
         &mut self,
         class_name: &str,
-        test_method: &VmMethod,
-    ) -> Result<(), String> {
+    ) -> Result<(VmValue, Rc<HashMap<String, VmMethod>>), String> {
         let entry = self
             .classes
             .get(class_name)
@@ -4812,27 +4850,15 @@ impl Vm {
             .collect();
         let methods = entry.methods.clone();
         let fields = self.alloc_fields(fields_map);
-        let instance = VmValue::Instance {
-            class_name: class_name.to_string(),
-            ancestor_chain,
-            fields,
-            methods: methods.clone(),
-        };
-
-        // Call setup if defined and not the base no-op from Test itself.
-        if let Some(setup) = methods.get("setup") {
-            self.call_method_on_instance(instance.clone(), setup)?;
-        }
-
-        // Run the test.
-        self.call_method_on_instance(instance.clone(), test_method)?;
-
-        // Call teardown if defined.
-        if let Some(teardown) = methods.get("teardown") {
-            self.call_method_on_instance(instance.clone(), teardown)?;
-        }
-
-        Ok(())
+        Ok((
+            VmValue::Instance {
+                class_name: class_name.to_string(),
+                ancestor_chain,
+                fields,
+                methods: methods.clone(),
+            },
+            methods,
+        ))
     }
 }
 
