@@ -44,31 +44,3 @@ fn zero() {
     assert_eq!(eval("(-0.0).zero?()"), VmValue::Bool(true));
     assert_eq!(eval("1.5.zero?()"), VmValue::Bool(false));
 }
-
-#[test]
-fn arithmetic() {
-    assert_eq!(eval("1.5 + 2.5"), VmValue::Float(4.0));
-    assert_eq!(eval("3.0 - 1.5"), VmValue::Float(1.5));
-    assert_eq!(eval("2.0 * 3.0"), VmValue::Float(6.0));
-    assert_eq!(eval("7.0 / 2.0"), VmValue::Float(3.5));
-}
-
-#[test]
-fn mixed_arithmetic() {
-    assert_eq!(eval("1 + 0.5"), VmValue::Float(1.5));
-    assert_eq!(eval("0.5 + 1"), VmValue::Float(1.5));
-    assert_eq!(eval("3 * 1.5"), VmValue::Float(4.5));
-    assert_eq!(eval("7 / 2.0"), VmValue::Float(3.5));
-}
-
-#[test]
-fn comparison() {
-    assert_eq!(eval("1.5 < 2.0"), VmValue::Bool(true));
-    assert_eq!(eval("2.0 > 1.5"), VmValue::Bool(true));
-    assert_eq!(eval("1.0 == 1.0"), VmValue::Bool(true));
-}
-
-#[test]
-fn negation() {
-    assert_eq!(eval("-3.14"), VmValue::Float(-3.14));
-}

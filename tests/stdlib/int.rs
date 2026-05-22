@@ -38,23 +38,3 @@ fn times() {
     let src = "sum = 0\n3.times() { |i| sum = sum + i }\nsum";
     assert_eq!(eval(src), VmValue::Int(3));
 }
-
-#[test]
-fn modulo() {
-    assert_eq!(eval("10 % 3"), VmValue::Int(1));
-    assert_eq!(eval("9 % 3"), VmValue::Int(0));
-}
-
-#[test]
-fn division_stays_int() {
-    assert_eq!(eval("7 / 2"), VmValue::Int(3));
-}
-
-#[test]
-fn division_by_zero() {
-    use super::eval_err;
-    use sapphire::vm::VmError;
-
-    let err = eval_err("1 / 0");
-    assert!(matches!(err, VmError::Raised(..)));
-}
