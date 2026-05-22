@@ -1,37 +1,12 @@
+mod support;
+
 use sapphire::compiler::compile;
 use sapphire::error::SapphireError;
 use sapphire::lexer::Lexer;
 use sapphire::parser::Parser;
 use sapphire::vm::{Vm, VmError, VmValue};
 use std::path::PathBuf;
-
-fn eval(src: &str) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, std::path::PathBuf::new())
-        .run()
-        .expect("vm error")
-        .expect("empty stack")
-}
-
-fn eval_with_stdlib(src: &str) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    let mut vm = Vm::new(func, std::path::PathBuf::new());
-    vm.load_stdlib().expect("stdlib");
-    vm.run().expect("vm error").expect("empty stack")
-}
-
-fn eval_err(src: &str) -> VmError {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, std::path::PathBuf::new())
-        .run()
-        .expect_err("expected vm error")
-}
+use support::{eval, eval_err, eval_stdlib, parse_err_msg};
 
 #[test]
 fn int_literal() {
@@ -272,7 +247,7 @@ while p * p <= limit {
 }
 flags[9]
 "#;
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(0));
+    assert_eq!(eval_stdlib(src), VmValue::Int(0));
 }
 
 #[test]
@@ -762,7 +737,7 @@ fn implicit_return_last_def_returns_method_name() {
 
 #[test]
 fn implicit_return_last_class_returns_class() {
-    let v = eval_with_stdlib("class ImplicitRetClass {}");
+    let v = eval_stdlib("class ImplicitRetClass {}");
     assert!(matches!(v, VmValue::Class { ref name, .. } if name == "ImplicitRetClass"));
 }
 
@@ -805,24 +780,24 @@ fn map_methods() {
 fn nil_bool_methods() {
     assert_eq!(eval("nil.nil?()"), VmValue::Bool(true));
     assert_eq!(eval("nil.to_s()"), VmValue::Str("".into()));
-    assert_eq!(eval_with_stdlib("false.nil?()"), VmValue::Bool(false));
-    assert_eq!(eval_with_stdlib("true.to_s()"), VmValue::Str("true".into()));
+    assert_eq!(eval_stdlib("false.nil?()"), VmValue::Bool(false));
+    assert_eq!(eval_stdlib("true.to_s()"), VmValue::Str("true".into()));
 }
 
 #[test]
 fn is_a_instance_hierarchy() {
     let base = "class Animal { attr name }\nclass Dog < Animal { attr breed }\nd = Dog.new(name: \"Rex\", breed: \"Lab\")\n";
     assert_eq!(
-        eval_with_stdlib(&(base.to_string() + "d.is_a?(Dog)")),
+        eval_stdlib(&(base.to_string() + "d.is_a?(Dog)")),
         VmValue::Bool(true)
     );
     assert_eq!(
-        eval_with_stdlib(&(base.to_string() + "d.is_a?(Animal)")),
+        eval_stdlib(&(base.to_string() + "d.is_a?(Animal)")),
         VmValue::Bool(true)
     );
     let unrelated = "class Animal { attr name }\nclass Dog < Animal { attr breed }\nclass Cat {}\nd = Dog.new(name: \"Rex\", breed: \"Lab\")\n";
     assert_eq!(
-        eval_with_stdlib(&(unrelated.to_string() + "d.is_a?(Cat)")),
+        eval_stdlib(&(unrelated.to_string() + "d.is_a?(Cat)")),
         VmValue::Bool(false)
     );
 }
@@ -1131,19 +1106,19 @@ fn each_next() {
 #[test]
 fn list_select() {
     let src = "result = [1, 2, 3, 4].select() { |x| x > 2 }\nresult.size()";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(2));
+    assert_eq!(eval_stdlib(src), VmValue::Int(2));
 }
 
 #[test]
 fn list_reduce_with_initial() {
     let src = "[1, 2, 3, 4, 5].reduce(0) { |acc, n| acc + n }";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(15));
+    assert_eq!(eval_stdlib(src), VmValue::Int(15));
 }
 
 #[test]
 fn list_reduce_without_initial() {
     let src = "[1, 2, 3, 4, 5].reduce() { |acc, n| acc * n }";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(120));
+    assert_eq!(eval_stdlib(src), VmValue::Int(120));
 }
 
 #[test]
@@ -1167,15 +1142,15 @@ result[2]"#;
 #[test]
 fn list_flatten() {
     let src = "result = [[1, 2], [3, [4, 5]]].flatten()\nresult.size()";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(5));
+    assert_eq!(eval_stdlib(src), VmValue::Int(5));
     let src2 = "result = [[1, 2], [3, [4, 5]]].flatten()\nresult[3]";
-    assert_eq!(eval_with_stdlib(src2), VmValue::Int(4));
+    assert_eq!(eval_stdlib(src2), VmValue::Int(4));
 }
 
 #[test]
 fn list_uniq() {
     let src = "result = [1, 2, 2, 3, 1].uniq()\nresult.size()";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(3));
+    assert_eq!(eval_stdlib(src), VmValue::Int(3));
 }
 
 #[test]
@@ -1183,17 +1158,17 @@ fn list_each_with_index() {
     let src = r#"pairs = []
 ["a", "b", "c"].each_with_index() { |item, i| pairs.append(i) }
 pairs[2]"#;
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(2));
+    assert_eq!(eval_stdlib(src), VmValue::Int(2));
 }
 
 #[test]
 fn list_zip() {
     let src = "result = [1, 2, 3].zip([4, 5, 6])\nresult.size()";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(3));
+    assert_eq!(eval_stdlib(src), VmValue::Int(3));
     let src2 = "result = [1, 2, 3].zip([4, 5, 6])\nresult[0][0]";
-    assert_eq!(eval_with_stdlib(src2), VmValue::Int(1));
+    assert_eq!(eval_stdlib(src2), VmValue::Int(1));
     let src3 = "result = [1, 2, 3].zip([4, 5, 6])\nresult[0][1]";
-    assert_eq!(eval_with_stdlib(src3), VmValue::Int(4));
+    assert_eq!(eval_stdlib(src3), VmValue::Int(4));
 }
 
 // ---- Map advanced methods ----
@@ -1204,12 +1179,12 @@ fn map_merge() {
 b = { y: 2 }
 c = a.merge(b)
 c.size()"#;
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(2));
+    assert_eq!(eval_stdlib(src), VmValue::Int(2));
     let src2 = r#"a = { x: 1 }
 b = { y: 2 }
 c = a.merge(b)
 c["x"]"#;
-    assert_eq!(eval_with_stdlib(src2), VmValue::Int(1));
+    assert_eq!(eval_stdlib(src2), VmValue::Int(1));
 }
 
 #[test]
@@ -1217,11 +1192,11 @@ fn map_select() {
     let src = r#"m = { a: 1, b: 2, c: 3 }
 result = m.select() { |k, v| v > 1 }
 result.size()"#;
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(2));
+    assert_eq!(eval_stdlib(src), VmValue::Int(2));
     let src2 = r#"m = { a: 1, b: 2, c: 3 }
 result = m.select() { |k, v| v > 1 }
 result.has_key?("a")"#;
-    assert_eq!(eval_with_stdlib(src2), VmValue::Bool(false));
+    assert_eq!(eval_stdlib(src2), VmValue::Bool(false));
 }
 
 // ---- Range ----
@@ -1229,14 +1204,14 @@ result.has_key?("a")"#;
 #[test]
 fn range_include() {
     // VM ranges are exclusive upper bound
-    assert_eq!(eval_with_stdlib("(1..10).include?(5)"), VmValue::Bool(true));
-    assert_eq!(eval_with_stdlib("(1..10).include?(1)"), VmValue::Bool(true));
+    assert_eq!(eval_stdlib("(1..10).include?(5)"), VmValue::Bool(true));
+    assert_eq!(eval_stdlib("(1..10).include?(1)"), VmValue::Bool(true));
     assert_eq!(
-        eval_with_stdlib("(1..10).include?(10)"),
+        eval_stdlib("(1..10).include?(10)"),
         VmValue::Bool(false)
     );
     assert_eq!(
-        eval_with_stdlib("(1..10).include?(11)"),
+        eval_stdlib("(1..10).include?(11)"),
         VmValue::Bool(false)
     );
 }
@@ -1477,10 +1452,10 @@ B.new().run()"#;
 fn string_chars() {
     let src = r#"result = "hi".chars()
 result.size()"#;
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(2));
+    assert_eq!(eval_stdlib(src), VmValue::Int(2));
     let src2 = r#"result = "hi".chars()
 result[0]"#;
-    assert_eq!(eval_with_stdlib(src2), VmValue::Str("h".into()));
+    assert_eq!(eval_stdlib(src2), VmValue::Str("h".into()));
 }
 
 // ---- Multi-assign three ----
@@ -1584,14 +1559,14 @@ fn chain_multiline_map_then_map() {
 #[test]
 fn chain_multiline_select_then_size() {
     let src = "[1, 2, 3, 4]\n  .select() { |x| x > 2 }\n  .size()";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(2));
+    assert_eq!(eval_stdlib(src), VmValue::Int(2));
 }
 
 #[test]
 fn chain_multiline_map_then_select() {
     // map then select across lines
     let src = "[1, 2, 3, 4]\n  .map() { |x| x * 2 }\n  .select() { |x| x > 4 }\n  .size()";
-    assert_eq!(eval_with_stdlib(src), VmValue::Int(2));
+    assert_eq!(eval_stdlib(src), VmValue::Int(2));
 }
 
 // ── break / next in while loops ───────────────────────────────────────────────
@@ -1762,7 +1737,7 @@ fn unary_tilde_infers_int_return() {
 #[test]
 fn break_in_each_stops_iteration() {
     // break should stop iteration and execution continues after the each call
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         r#"
 sum = 0
 [1, 2, 3, 4, 5].each { |n|
@@ -1777,7 +1752,7 @@ sum"#,
 #[test]
 fn break_in_each_execution_continues_after() {
     // code after the each call must still run
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         r#"
 x = 0
 [1, 2, 3].each { |n| break if n == 2 }
@@ -1790,7 +1765,7 @@ x"#,
 #[test]
 fn break_in_map_stops_early() {
     // map collects [10, 20] then hits break; result is a partial list
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         r#"
 [1, 2, 3, 4].map { |n|
   break if n == 3
@@ -1802,7 +1777,7 @@ fn break_in_map_stops_early() {
 
 #[test]
 fn next_in_each_skips_element() {
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         r#"
 sum = 0
 [1, 2, 3, 4, 5].each { |n|
@@ -1817,7 +1792,7 @@ sum"#,
 #[test]
 fn break_in_nested_each_exits_inner_only() {
     // break inside the inner each should not affect the outer each
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         r#"
 count = 0
 [1, 2, 3].each { |i|
@@ -2009,13 +1984,6 @@ Box.new().size()"#;
 
 // ── Union type syntax ─────────────────────────────────────────────────────────
 
-fn parse_err_msg(src: &str) -> String {
-    let tokens = sapphire::lexer::Lexer::new(src).scan_tokens();
-    let err = sapphire::parser::Parser::new(tokens)
-        .parse()
-        .expect_err("expected parse error");
-    format!("{}", err)
-}
 
 #[test]
 fn union_return_type_accepts_either_arm() {
@@ -2167,7 +2135,7 @@ fn type_alias_runtime_return_type_checked() {
 
 #[test]
 fn generic_class_runs() {
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         "class Box[T] { attr value: T\ndef get() -> T { self.value } }\nb = Box.new(value: 42)\nb.get()",
     );
     assert_eq!(result, VmValue::Int(42));
@@ -2176,13 +2144,13 @@ fn generic_class_runs() {
 #[test]
 fn generic_class_string_value_runs() {
     let result =
-        eval_with_stdlib("class Box[T] { attr value: T }\nb = Box.new(value: \"hi\")\nb.value");
+        eval_stdlib("class Box[T] { attr value: T }\nb = Box.new(value: \"hi\")\nb.value");
     assert_eq!(result, VmValue::Str("hi".into()));
 }
 
 #[test]
 fn generic_pair_class_runs() {
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         "class Pair[A, B] { attr first: A\nattr second: B }\np = Pair.new(first: 1, second: \"x\")\np.first",
     );
     assert_eq!(result, VmValue::Int(1));
@@ -2197,7 +2165,7 @@ fn generic_function_runs() {
 #[test]
 fn generics_example_file_runs() {
     // Smoke test: the examples/generics.spr file should execute without errors
-    let result = eval_with_stdlib(
+    let result = eval_stdlib(
         "class Box[T] { attr value: T\ndef get() -> T { self.value } }\n\
          b = Box.new(value: 99)\nb.get()",
     );

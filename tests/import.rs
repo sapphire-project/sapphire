@@ -1,19 +1,11 @@
+mod support;
+
 use sapphire::compiler::compile;
 use sapphire::lexer::Lexer;
 use sapphire::parser::Parser;
 use sapphire::vm::{Vm, VmValue};
 use std::path::PathBuf;
-
-/// Run source code with the given directory as the "current file" location,
-/// so that relative imports resolve correctly.
-fn run_with_dir(src: &str, dir: PathBuf) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    let mut vm = Vm::new(func, dir);
-    vm.load_stdlib().expect("stdlib");
-    vm.run().expect("vm error").expect("empty stack")
-}
+use support::eval_in_dir;
 
 fn imports_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -26,7 +18,7 @@ fn imports_dir() -> PathBuf {
 #[test]
 fn import_functions_from_file() {
     let dir = imports_dir();
-    let result = run_with_dir(
+    let result = eval_in_dir(
         r#"import "./math_utils"
 square(5)"#,
         dir,
@@ -37,7 +29,7 @@ square(5)"#,
 #[test]
 fn import_multiple_functions() {
     let dir = imports_dir();
-    let result = run_with_dir(
+    let result = eval_in_dir(
         r#"import "./math_utils"
 cube(3)"#,
         dir,
@@ -48,7 +40,7 @@ cube(3)"#,
 #[test]
 fn import_class_and_instantiate() {
     let dir = imports_dir();
-    let result = run_with_dir(
+    let result = eval_in_dir(
         r#"import "./point"
 p = Point.new(x: 10, y: 20)
 p.x"#,
@@ -60,7 +52,7 @@ p.x"#,
 #[test]
 fn import_class_method_call() {
     let dir = imports_dir();
-    let result = run_with_dir(
+    let result = eval_in_dir(
         r#"import "./point"
 p = Point.new(x: 3, y: 4)
 p.to_s()"#,
@@ -72,7 +64,7 @@ p.to_s()"#,
 #[test]
 fn import_from_subdirectory() {
     let dir = imports_dir();
-    let result = run_with_dir(
+    let result = eval_in_dir(
         r#"import "./sub/greeting"
 greet("world")"#,
         dir,
@@ -85,7 +77,7 @@ fn import_is_deduplicated() {
     // Importing the same file twice should not double-execute it.
     // We verify by checking that `square` is available and no error occurs.
     let dir = imports_dir();
-    let result = run_with_dir(
+    let result = eval_in_dir(
         r#"import "./math_utils"
 import "./math_utils"
 square(4)"#,

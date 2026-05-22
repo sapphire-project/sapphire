@@ -1,59 +1,7 @@
-use sapphire::compiler::compile;
-use sapphire::lexer::Lexer;
-use sapphire::parser::Parser;
-use sapphire::vm::{Vm, VmError, VmValue};
-use std::path::PathBuf;
+mod support;
 
-fn eval(src: &str) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, PathBuf::new())
-        .run()
-        .expect("vm error")
-        .expect("empty stack")
-}
-
-fn eval_err(src: &str) -> VmError {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, PathBuf::new())
-        .run()
-        .expect_err("expected vm error")
-}
-
-fn parse_err_msg(src: &str) -> String {
-    let tokens = Lexer::new(src).scan_tokens();
-    let err = Parser::new(tokens)
-        .parse()
-        .expect_err("expected parse error");
-    format!("{}", err)
-}
-
-fn typecheck_err_msg(src: &str) -> String {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens)
-        .parse()
-        .expect("parse error");
-    let errors = sapphire::typechecker::TypeChecker::check(&stmts);
-    assert!(!errors.is_empty(), "expected type errors for:\n{src}");
-    errors[0].message.clone()
-}
-
-macro_rules! assert_typecheck_error {
-    ($src:expr, $($substring:expr),+ $(,)?) => {{
-        let msg = typecheck_err_msg($src);
-        $(
-        assert!(
-            msg.contains($substring),
-            "expected first type error to contain:\n{}\n\nmessage:\n{}",
-            $substring,
-            msg
-        );
-        )*
-    }};
-}
+use sapphire::vm::{VmError, VmValue};
+use support::{eval, eval_err, parse_err_msg};
 
 #[test]
 fn abstract_class_new_is_error() {

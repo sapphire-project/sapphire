@@ -1,46 +1,6 @@
-/// First type error message from `src`, or panics if the program is accepted.
-fn typecheck_err_msg(src: &str) -> String {
-    let tokens = sapphire::lexer::Lexer::new(src).scan_tokens();
-    let stmts = sapphire::parser::Parser::new(tokens)
-        .parse()
-        .expect("parse error");
-    let errors = sapphire::typechecker::TypeChecker::check(&stmts);
-    assert!(!errors.is_empty(), "expected type errors for:\n{src}");
-    errors[0].message.clone()
-}
+mod support;
 
-/// Asserts typecheck fails; the first error message must contain every `substring` (e.g. expected and got for mismatches).
-macro_rules! assert_typecheck_error {
-    ($src:expr, $($substring:expr),+ $(,)?) => {
-        {
-            let msg = typecheck_err_msg($src);
-            $(
-            assert!(
-                msg.contains($substring),
-                "expected first type error to contain:\n{}\n\nmessage:\n{}",
-                $substring,
-                msg
-            );
-            )*
-        }
-    };
-}
-
-fn typecheck_ok(src: &str) {
-    let tokens = sapphire::lexer::Lexer::new(src).scan_tokens();
-    let stmts = sapphire::parser::Parser::new(tokens).parse().unwrap();
-    let errors = sapphire::typechecker::TypeChecker::check(&stmts);
-    assert!(errors.is_empty(), "unexpected type errors: {:?}", errors);
-}
-
-fn check_types_ok(src: &str) -> sapphire::typechecker::CheckedTypes {
-    use sapphire::typechecker::TypeChecker;
-    let tokens = sapphire::lexer::Lexer::new(src).scan_tokens();
-    let stmts = sapphire::parser::Parser::new(tokens).parse().unwrap();
-    let info = TypeChecker::check_info(&stmts);
-    assert!(info.errors.is_empty(), "unexpected type errors: {:?}", info.errors);
-    info.types
-}
+use support::{check_types_ok, typecheck_ok};
 
 /// Asserts a top-level function's resolved return type; `$ty` is a bare name (`Int`, `String`, `MyClass`, …).
 macro_rules! assert_function_returns {

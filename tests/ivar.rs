@@ -1,18 +1,7 @@
-use sapphire::compiler::compile;
-use sapphire::lexer::Lexer;
-use sapphire::parser::Parser;
-use sapphire::vm::{Vm, VmValue};
-use std::path::PathBuf;
+mod support;
 
-fn eval(src: &str) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, PathBuf::new())
-        .run()
-        .expect("vm error")
-        .expect("empty stack")
-}
+use sapphire::vm::VmValue;
+use support::eval;
 
 #[test]
 fn ivar_read_write_basic() {
