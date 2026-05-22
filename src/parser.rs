@@ -2199,6 +2199,19 @@ impl Parser {
             return Ok(Expr::SelfExpr);
         }
 
+        if let TokenKind::AtVar(name) = self.peek().kind.clone() {
+            self.advance();
+            if self.check(&TokenKind::Eq) {
+                self.advance(); // consume '='
+                let value = self.logical()?;
+                return Ok(Expr::IVarSet {
+                    name,
+                    value: Box::new(value),
+                });
+            }
+            return Ok(Expr::IVar { name });
+        }
+
         if self.check(&TokenKind::Def) {
             return self.function_def();
         }

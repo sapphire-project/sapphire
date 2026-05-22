@@ -643,6 +643,27 @@ impl Compiler {
                 Ok(())
             }
 
+            Expr::IVar { name } => {
+                self.emit(OpCode::GetSelf);
+                let idx = self
+                    .state_mut()
+                    .chunk
+                    .add_constant(Constant::Str(name.clone()));
+                self.emit(OpCode::GetField(idx));
+                Ok(())
+            }
+
+            Expr::IVarSet { name, value } => {
+                self.emit(OpCode::GetSelf);
+                self.expr(value)?;
+                let idx = self
+                    .state_mut()
+                    .chunk
+                    .add_constant(Constant::Str(name.clone()));
+                self.emit(OpCode::SetField(idx));
+                Ok(())
+            }
+
             Expr::Call {
                 callee,
                 args,
