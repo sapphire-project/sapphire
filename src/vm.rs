@@ -823,7 +823,7 @@ impl Vm {
         }
     }
 
-    fn alloc_list(&mut self, v: Vec<VmValue>) -> VmValue {
+    pub(crate) fn alloc_list(&mut self, v: Vec<VmValue>) -> VmValue {
         self.maybe_gc();
         VmValue::List(self.heap.alloc(HeapObject::List(v)))
     }
@@ -835,7 +835,7 @@ impl Vm {
         self.maybe_gc();
         VmValue::Set(self.heap.alloc(HeapObject::Set(v)))
     }
-    fn alloc_fields(&mut self, m: HashMap<String, VmValue>) -> GcRef {
+    pub(crate) fn alloc_fields(&mut self, m: HashMap<String, VmValue>) -> GcRef {
         self.maybe_gc();
         self.heap.alloc(HeapObject::Fields(m))
     }
@@ -920,293 +920,45 @@ impl Vm {
         Ok(chain)
     }
 
-    /// Materialise a `DtValue` returned by the datetime dispatch module into a
-    /// fully-formed `VmValue`.  For `NewInstance` we look up the class entry in
-    /// the registry to obtain the compiled method table.
-    fn finalize_dt(&mut self, dt: crate::datetime::DtValue, line: u32) -> Result<VmValue, VmError> {
-        match dt {
-            crate::datetime::DtValue::Value(v) => Ok(v),
-            crate::datetime::DtValue::NewInstance { class_name, fields } => {
-                let methods = self
-                    .classes
-                    .get(&class_name)
-                    .map(|e| e.methods.clone())
-                    .ok_or_else(|| VmError::TypeError {
-                        message: format!(
-                            "datetime class '{}' not loaded; \
-                             call vm.load_stdlib() first",
-                            class_name
-                        ),
-                        line,
-                    })?;
-                let ancestor_chain = Rc::new(
-                    self.classes
-                        .get(&class_name)
-                        .map(|e| e.ancestors.clone())
-                        .unwrap_or_else(|| vec![class_name.clone()]),
-                );
-                let gc_fields = self.alloc_fields(fields);
-                Ok(VmValue::Instance {
-                    class_name,
-                    ancestor_chain,
-                    fields: gc_fields,
-                    methods,
-                })
-            }
-        }
+    pub(crate) fn class_methods(&self, name: &str) -> Option<Rc<HashMap<String, VmMethod>>> {
+        self.classes.get(name).map(|e| e.methods.clone())
     }
 
-    fn dispatch_socket_class(
-        &mut self,
-        method_name: &str,
-        args: &[VmValue],
-        line: u32,
-    ) -> Result<VmValue, VmError> {
-        match method_name {
-            "connect" => {
-                let (host, port) = match args {
-                    [VmValue::Str(h), VmValue::Int(p)] => (h.clone(), *p),
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "Socket.connect expects (String, Int)".into(),
-                            line,
-                        });
-                    }
-                };
-                let reader = crate::native_socket::socket_connect(&host, port, line)?;
-                let id = self.next_socket_id;
-                self.next_socket_id += 1;
-                self.sockets.insert(id, reader);
-                let methods = self
-                    .classes
-                    .get("Socket")
-                    .map(|e| e.methods.clone())
-                    .ok_or_else(|| VmError::TypeError {
-                        message: "Socket class not loaded; call load_stdlib() first".into(),
-                        line,
-                    })?;
-                let mut fields_map = HashMap::new();
-                fields_map.insert("fd".to_string(), VmValue::Int(id));
-                let fields_ref = self.alloc_fields(fields_map);
-                Ok(VmValue::Instance {
-                    class_name: "Socket".to_string(),
-                    ancestor_chain: Rc::new(
-                        self.classes
-                            .get("Socket")
-                            .map(|e| e.ancestors.clone())
-                            .unwrap_or_else(|| vec!["Socket".to_string()]),
-                    ),
-                    fields: fields_ref,
-                    methods,
-                })
-            }
-            _ => Err(VmError::TypeError {
-                message: format!("Socket has no class method '{}'", method_name),
-                line,
-            }),
-        }
+    pub(crate) fn class_ancestors(&self, name: &str) -> Option<Vec<String>> {
+        self.classes.get(name).map(|e| e.ancestors.clone())
     }
 
-    fn dispatch_socket_instance(
-        &mut self,
-        fields_ref: crate::gc::GcRef,
-        method_name: &str,
-        args: &[VmValue],
-        line: u32,
-    ) -> Result<VmValue, VmError> {
-        let fields = self.heap.get_fields(fields_ref).clone();
-        let fd = crate::native_socket::extract_fd(&fields, line)?;
-        let closed_err = || VmError::Raised(VmValue::Str(format!("socket fd {} is closed", fd)));
-        match method_name {
-            "write" => {
-                let data = match args {
-                    [VmValue::Str(s)] => s.clone(),
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "socket.write expects a String".into(),
-                            line,
-                        });
-                    }
-                };
-                let reader = self.sockets.get_mut(&fd).ok_or_else(closed_err)?;
-                crate::native_socket::socket_write(reader, &data, line)?;
-                Ok(VmValue::Nil)
-            }
-            "read_line" => {
-                if !args.is_empty() {
-                    return Err(VmError::TypeError {
-                        message: "socket.read_line takes no arguments".into(),
-                        line,
-                    });
-                }
-                let reader = self.sockets.get_mut(&fd).ok_or_else(closed_err)?;
-                crate::native_socket::socket_read_line(reader, line).map(VmValue::Str)
-            }
-            "read_bytes" => {
-                let n = match args {
-                    [VmValue::Int(n)] => *n,
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "socket.read_bytes expects an Int".into(),
-                            line,
-                        });
-                    }
-                };
-                let reader = self.sockets.get_mut(&fd).ok_or_else(closed_err)?;
-                crate::native_socket::socket_read_bytes(reader, n, line).map(VmValue::Str)
-            }
-            "read_all" => {
-                if !args.is_empty() {
-                    return Err(VmError::TypeError {
-                        message: "socket.read_all takes no arguments".into(),
-                        line,
-                    });
-                }
-                let reader = self.sockets.get_mut(&fd).ok_or_else(closed_err)?;
-                crate::native_socket::socket_read_all(reader, line).map(VmValue::Str)
-            }
-            "close" => {
-                self.sockets.remove(&fd);
-                Ok(VmValue::Nil)
-            }
-            _ => Err(VmError::TypeError {
-                message: format!("Socket has no method '{}'", method_name),
-                line,
-            }),
-        }
+    pub(crate) fn heap_fields_clone(&self, fields_ref: GcRef) -> HashMap<String, VmValue> {
+        self.heap.get_fields(fields_ref).clone()
     }
 
-    fn dispatch_regex_instance(
+    pub(crate) fn next_socket_id(&mut self) -> i64 {
+        let id = self.next_socket_id;
+        self.next_socket_id += 1;
+        id
+    }
+
+    pub(crate) fn insert_socket(
         &mut self,
-        fields_ref: crate::gc::GcRef,
-        method_name: &str,
-        args: &[VmValue],
-        line: u32,
-    ) -> Result<VmValue, VmError> {
-        let fields = self.heap.get_fields(fields_ref).clone();
-        let id = crate::native_regex::extract_id(&fields, line)?;
-        let re = self.regexes.get(&id).ok_or_else(|| VmError::TypeError {
-            message: format!("regex id {} not found", id),
-            line,
-        })?;
-        match method_name {
-            "match?" => {
-                let text = match args {
-                    [VmValue::Str(s)] => s.clone(),
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "regex.match? expects a String".into(),
-                            line,
-                        });
-                    }
-                };
-                Ok(VmValue::Bool(crate::native_regex::regex_match_bool(
-                    re, &text,
-                )))
-            }
-            "match" => {
-                let text = match args {
-                    [VmValue::Str(s)] => s.clone(),
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "regex.match expects a String".into(),
-                            line,
-                        });
-                    }
-                };
-                match re.captures(&text) {
-                    None => Ok(VmValue::Nil),
-                    Some(caps) => {
-                        let full = caps.get(0).unwrap().as_str().to_string();
-                        let start = caps.get(0).unwrap().start() as i64;
-                        let end = caps.get(0).unwrap().end() as i64;
-                        let capture_list: Vec<VmValue> = caps
-                            .iter()
-                            .skip(1)
-                            .map(|m| match m {
-                                Some(m) => VmValue::Str(m.as_str().to_string()),
-                                None => VmValue::Nil,
-                            })
-                            .collect();
-                        let methods = self
-                            .classes
-                            .get("Match")
-                            .map(|e| e.methods.clone())
-                            .ok_or_else(|| VmError::TypeError {
-                                message: "Regex.Match class not loaded".to_string(),
-                                line,
-                            })?;
-                        let mut match_fields = HashMap::new();
-                        match_fields.insert("full".to_string(), VmValue::Str(full));
-                        match_fields.insert("captures".to_string(), self.alloc_list(capture_list));
-                        match_fields.insert("start".to_string(), VmValue::Int(start));
-                        match_fields.insert("end_pos".to_string(), VmValue::Int(end));
-                        let gc_fields = self.alloc_fields(match_fields);
-                        Ok(VmValue::Instance {
-                            class_name: "Match".to_string(),
-                            ancestor_chain: Rc::new(
-                                self.classes
-                                    .get("Match")
-                                    .map(|e| e.ancestors.clone())
-                                    .unwrap_or_else(|| vec!["Match".to_string()]),
-                            ),
-                            fields: gc_fields,
-                            methods,
-                        })
-                    }
-                }
-            }
-            "scan" => {
-                let text = match args {
-                    [VmValue::Str(s)] => s.clone(),
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "regex.scan expects a String".into(),
-                            line,
-                        });
-                    }
-                };
-                let matches = crate::native_regex::regex_scan(re, &text);
-                let match_vals: Vec<VmValue> = matches.into_iter().map(VmValue::Str).collect();
-                Ok(self.alloc_list(match_vals))
-            }
-            "replace" => {
-                let (text, replacement) = match args {
-                    [VmValue::Str(t), VmValue::Str(r)] => (t.clone(), r.clone()),
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "regex.replace expects (String, String)".into(),
-                            line,
-                        });
-                    }
-                };
-                Ok(VmValue::Str(crate::native_regex::regex_replace(
-                    re,
-                    &text,
-                    &replacement,
-                )))
-            }
-            "replace_all" => {
-                let (text, replacement) = match args {
-                    [VmValue::Str(t), VmValue::Str(r)] => (t.clone(), r.clone()),
-                    _ => {
-                        return Err(VmError::TypeError {
-                            message: "regex.replace_all expects (String, String)".into(),
-                            line,
-                        });
-                    }
-                };
-                Ok(VmValue::Str(crate::native_regex::regex_replace_all(
-                    re,
-                    &text,
-                    &replacement,
-                )))
-            }
-            _ => Err(VmError::TypeError {
-                message: format!("Regex has no method '{}'", method_name),
-                line,
-            }),
-        }
+        id: i64,
+        reader: std::io::BufReader<std::net::TcpStream>,
+    ) {
+        self.sockets.insert(id, reader);
+    }
+
+    pub(crate) fn socket_mut(
+        &mut self,
+        id: i64,
+    ) -> Option<&mut std::io::BufReader<std::net::TcpStream>> {
+        self.sockets.get_mut(&id)
+    }
+
+    pub(crate) fn remove_socket(&mut self, id: i64) {
+        self.sockets.remove(&id);
+    }
+
+    pub(crate) fn regex(&self, id: i64) -> Option<&regex::Regex> {
+        self.regexes.get(&id)
     }
 
     pub fn format_value(&self, val: &VmValue) -> String {
@@ -2641,12 +2393,18 @@ impl Vm {
                                     });
                                 }
                             }
-                            if arg_count < method.function.required_arity || arg_count > method.function.arity {
-                                let expected = if method.function.required_arity == method.function.arity {
-                                    format!("{}", method.function.arity)
-                                } else {
-                                    format!("{} to {}", method.function.required_arity, method.function.arity)
-                                };
+                            if arg_count < method.function.required_arity
+                                || arg_count > method.function.arity
+                            {
+                                let expected =
+                                    if method.function.required_arity == method.function.arity {
+                                        format!("{}", method.function.arity)
+                                    } else {
+                                        format!(
+                                            "{} to {}",
+                                            method.function.required_arity, method.function.arity
+                                        )
+                                    };
                                 return Err(VmError::TypeError {
                                     message: format!(
                                         "class method '{}' expects {} arg(s), got {}",
@@ -2658,7 +2416,8 @@ impl Vm {
                             self.push_param_defaults(&method.function, arg_count);
                             check_param_types(
                                 &method.function,
-                                &mut self.stack[recv_slot + 1..recv_slot + 1 + method.function.arity],
+                                &mut self.stack
+                                    [recv_slot + 1..recv_slot + 1 + method.function.arity],
                                 line,
                             )?;
                             self.frames.push(CallFrame {
@@ -2733,12 +2492,18 @@ impl Vm {
                                             });
                                         }
                                     }
-                                    if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                        let expected = if m.function.required_arity == m.function.arity {
-                                            format!("{}", m.function.arity)
-                                        } else {
-                                            format!("{} to {}", m.function.required_arity, m.function.arity)
-                                        };
+                                    if arg_count < m.function.required_arity
+                                        || arg_count > m.function.arity
+                                    {
+                                        let expected =
+                                            if m.function.required_arity == m.function.arity {
+                                                format!("{}", m.function.arity)
+                                            } else {
+                                                format!(
+                                                    "{} to {}",
+                                                    m.function.required_arity, m.function.arity
+                                                )
+                                            };
                                         return Err(VmError::TypeError {
                                             message: format!(
                                                 "class method '{}' expects {} arg(s), got {}",
@@ -2750,7 +2515,8 @@ impl Vm {
                                     self.push_param_defaults(&m.function, arg_count);
                                     check_param_types(
                                         &m.function,
-                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                        &mut self.stack
+                                            [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                         line,
                                     )?;
                                     self.frames.push(CallFrame {
@@ -2828,8 +2594,12 @@ impl Vm {
                             self.stack.push(result);
                         } else if name == "Socket" {
                             let args: Vec<VmValue> = self.stack[recv_slot + 1..].to_vec();
-                            let result = match self.dispatch_socket_class(&method_name, &args, line)
-                            {
+                            let result = match crate::native_socket::dispatch_socket_class(
+                                self,
+                                &method_name,
+                                &args,
+                                line,
+                            ) {
                                 Ok(val) => val,
                                 Err(VmError::Raised(val)) => {
                                     self.stack.truncate(recv_slot);
@@ -2860,7 +2630,7 @@ impl Vm {
                                 }
                                 Err(e) => return Err(e),
                             };
-                            let result = self.finalize_dt(dt, line)?;
+                            let result = crate::native_datetime::finalize_dt(self, dt, line)?;
                             self.stack.truncate(recv_slot);
                             self.stack.push(result);
                         } else if method_name == "name" && arg_count == 0 {
@@ -2962,12 +2732,18 @@ impl Vm {
                                             });
                                         }
                                     }
-                                    if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                        let expected = if m.function.required_arity == m.function.arity {
-                                            format!("{}", m.function.arity)
-                                        } else {
-                                            format!("{} to {}", m.function.required_arity, m.function.arity)
-                                        };
+                                    if arg_count < m.function.required_arity
+                                        || arg_count > m.function.arity
+                                    {
+                                        let expected =
+                                            if m.function.required_arity == m.function.arity {
+                                                format!("{}", m.function.arity)
+                                            } else {
+                                                format!(
+                                                    "{} to {}",
+                                                    m.function.required_arity, m.function.arity
+                                                )
+                                            };
                                         return Err(VmError::TypeError {
                                             message: format!(
                                                 "method '{}' expects {} arg(s), got {}",
@@ -2979,7 +2755,8 @@ impl Vm {
                                     self.push_param_defaults(&m.function, arg_count);
                                     check_param_types(
                                         &m.function,
-                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                        &mut self.stack
+                                            [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                         line,
                                     )?;
                                     let class_name = Some(m.defined_in.clone());
@@ -3020,11 +2797,17 @@ impl Vm {
                                         });
                                     }
                                 }
-                                if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                    let expected = if m.function.required_arity == m.function.arity {
+                                if arg_count < m.function.required_arity
+                                    || arg_count > m.function.arity
+                                {
+                                    let expected = if m.function.required_arity == m.function.arity
+                                    {
                                         format!("{}", m.function.arity)
                                     } else {
-                                        format!("{} to {}", m.function.required_arity, m.function.arity)
+                                        format!(
+                                            "{} to {}",
+                                            m.function.required_arity, m.function.arity
+                                        )
                                     };
                                     return Err(VmError::TypeError {
                                         message: format!(
@@ -3037,7 +2820,8 @@ impl Vm {
                                 self.push_param_defaults(&m.function, arg_count);
                                 check_param_types(
                                     &m.function,
-                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                    &mut self.stack
+                                        [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                     line,
                                 )?;
                                 // recv and args are already on the stack at recv_slot..
@@ -3101,7 +2885,7 @@ impl Vm {
                             line,
                         ) {
                             Ok(dt) => {
-                                let result = self.finalize_dt(dt, line)?;
+                                let result = crate::native_datetime::finalize_dt(self, dt, line)?;
                                 self.stack.truncate(recv_slot);
                                 self.stack.push(result);
                                 dt_handled = true;
@@ -3122,7 +2906,13 @@ impl Vm {
                     let mut regex_handled = false;
                     if dt_class == "Regex" {
                         let args: Vec<VmValue> = self.stack[recv_slot + 1..].to_vec();
-                        match self.dispatch_regex_instance(dt_fields, &method_name, &args, line) {
+                        match crate::native_regex::dispatch_regex_instance(
+                            self,
+                            dt_fields,
+                            &method_name,
+                            &args,
+                            line,
+                        ) {
                             Ok(result) => {
                                 self.stack.truncate(recv_slot);
                                 self.stack.push(result);
@@ -3140,7 +2930,13 @@ impl Vm {
                     let mut socket_handled = false;
                     if dt_class == "Socket" {
                         let args: Vec<VmValue> = self.stack[recv_slot + 1..].to_vec();
-                        match self.dispatch_socket_instance(dt_fields, &method_name, &args, line) {
+                        match crate::native_socket::dispatch_socket_instance(
+                            self,
+                            dt_fields,
+                            &method_name,
+                            &args,
+                            line,
+                        ) {
                             Ok(result) => {
                                 self.stack.truncate(recv_slot);
                                 self.stack.push(result);
@@ -3174,12 +2970,18 @@ impl Vm {
                                 });
                             }
                         }
-                        if arg_count < method.function.required_arity || arg_count > method.function.arity {
-                            let expected = if method.function.required_arity == method.function.arity {
-                                format!("{}", method.function.arity)
-                            } else {
-                                format!("{} to {}", method.function.required_arity, method.function.arity)
-                            };
+                        if arg_count < method.function.required_arity
+                            || arg_count > method.function.arity
+                        {
+                            let expected =
+                                if method.function.required_arity == method.function.arity {
+                                    format!("{}", method.function.arity)
+                                } else {
+                                    format!(
+                                        "{} to {}",
+                                        method.function.required_arity, method.function.arity
+                                    )
+                                };
                             return Err(VmError::TypeError {
                                 message: format!(
                                     "method '{}' expects {} arg(s), got {}",
@@ -3314,11 +3116,16 @@ impl Vm {
                             });
                         }
                     };
-                    if arg_count < method.function.required_arity || arg_count > method.function.arity {
+                    if arg_count < method.function.required_arity
+                        || arg_count > method.function.arity
+                    {
                         let expected = if method.function.required_arity == method.function.arity {
                             format!("{}", method.function.arity)
                         } else {
-                            format!("{} to {}", method.function.required_arity, method.function.arity)
+                            format!(
+                                "{} to {}",
+                                method.function.required_arity, method.function.arity
+                            )
                         };
                         return Err(VmError::TypeError {
                             message: format!(
@@ -3557,7 +3364,8 @@ impl Vm {
                                     });
                                 }
                             }
-                            if arg_count < m.function.required_arity || arg_count > m.function.arity {
+                            if arg_count < m.function.required_arity || arg_count > m.function.arity
+                            {
                                 let expected = if m.function.required_arity == m.function.arity {
                                     format!("{}", m.function.arity)
                                 } else {
@@ -3597,11 +3405,17 @@ impl Vm {
                             .and_then(|entry| entry.methods.get(&method_name).cloned());
                         match method {
                             Some(m) => {
-                                if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                    let expected = if m.function.required_arity == m.function.arity {
+                                if arg_count < m.function.required_arity
+                                    || arg_count > m.function.arity
+                                {
+                                    let expected = if m.function.required_arity == m.function.arity
+                                    {
                                         format!("{}", m.function.arity)
                                     } else {
-                                        format!("{} to {}", m.function.required_arity, m.function.arity)
+                                        format!(
+                                            "{} to {}",
+                                            m.function.required_arity, m.function.arity
+                                        )
                                     };
                                     return Err(VmError::TypeError {
                                         message: format!(
@@ -3614,7 +3428,8 @@ impl Vm {
                                 self.push_param_defaults(&m.function, arg_count);
                                 check_param_types(
                                     &m.function,
-                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                    &mut self.stack
+                                        [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                     line,
                                 )?;
                                 let class_name = Some(m.defined_in.clone());
@@ -3671,11 +3486,16 @@ impl Vm {
                             });
                         }
                     }
-                    if arg_count < method.function.required_arity || arg_count > method.function.arity {
+                    if arg_count < method.function.required_arity
+                        || arg_count > method.function.arity
+                    {
                         let expected = if method.function.required_arity == method.function.arity {
                             format!("{}", method.function.arity)
                         } else {
-                            format!("{} to {}", method.function.required_arity, method.function.arity)
+                            format!(
+                                "{} to {}",
+                                method.function.required_arity, method.function.arity
+                            )
                         };
                         return Err(VmError::TypeError {
                             message: format!(
