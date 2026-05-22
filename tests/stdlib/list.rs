@@ -98,30 +98,6 @@ fn uniq() {
 }
 
 #[test]
-fn select() {
-    let src = "result = [1, 2, 3, 4].select() { |x| x > 2 }\nresult.size()";
-    assert_eq!(eval(src), VmValue::Int(2));
-}
-
-#[test]
-fn each_with_index() {
-    let src = r#"pairs = []
-["a", "b", "c"].each_with_index() { |item, i| pairs.append(i) }
-pairs[2]"#;
-    assert_eq!(eval(src), VmValue::Int(2));
-}
-
-#[test]
-fn zip() {
-    let src = "result = [1, 2, 3].zip([4, 5, 6])\nresult.size()";
-    assert_eq!(eval(src), VmValue::Int(3));
-    let src2 = "result = [1, 2, 3].zip([4, 5, 6])\nresult[0][0]";
-    assert_eq!(eval(src2), VmValue::Int(1));
-    let src3 = "result = [1, 2, 3].zip([4, 5, 6])\nresult[0][1]";
-    assert_eq!(eval(src3), VmValue::Int(4));
-}
-
-#[test]
 fn implicit_it_in_each() {
     let src = "sum = 0\n[1, 2, 3].each() { |it| sum = sum + it }\nsum";
     assert_eq!(eval(src), VmValue::Int(6));

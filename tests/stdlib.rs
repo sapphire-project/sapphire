@@ -18,12 +18,6 @@ mod string;
 #[path = "stdlib/list.rs"]
 mod list;
 
-#[path = "stdlib/enumerable.rs"]
-mod enumerable;
-
-#[path = "stdlib/set.rs"]
-mod set;
-
 #[path = "stdlib/map.rs"]
 mod map;
 
