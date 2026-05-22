@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use crate::value::Value;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum RuntimeType {
     Named(String),
@@ -22,7 +24,12 @@ pub struct UpvalueDef {
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
+    /// Total parameter count (required + optional).
     pub arity: usize,
+    /// Minimum number of arguments required (parameters without defaults).
+    pub required_arity: usize,
+    /// Default values for each parameter slot; `None` means required.
+    pub param_defaults: Vec<Option<Value>>,
     /// Method name for bare `super` / `super()` in this closure; set on class methods only.
     pub super_method_name: Option<String>,
     pub chunk: Chunk,

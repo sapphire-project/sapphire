@@ -1090,7 +1090,13 @@ impl Parser {
                         TokenKind::Identifier(p) => {
                             self.advance();
                             let type_ann = self.parse_type_ann()?;
-                            params.push(ParamDef { name: p, type_ann });
+                            let default = if self.check(&TokenKind::Eq) {
+                                self.advance();
+                                Some(self.logical()?)
+                            } else {
+                                None
+                            };
+                            params.push(ParamDef { name: p, type_ann, default });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
@@ -1188,7 +1194,13 @@ impl Parser {
                         TokenKind::Identifier(p) => {
                             self.advance();
                             let type_ann = self.parse_type_ann()?;
-                            params.push(ParamDef { name: p, type_ann });
+                            let default = if self.check(&TokenKind::Eq) {
+                                self.advance();
+                                Some(self.logical()?)
+                            } else {
+                                None
+                            };
+                            params.push(ParamDef { name: p, type_ann, default });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
@@ -1252,7 +1264,13 @@ impl Parser {
                         TokenKind::Identifier(p) => {
                             self.advance();
                             let type_ann = self.parse_type_ann()?;
-                            params.push(ParamDef { name: p, type_ann });
+                            let default = if self.check(&TokenKind::Eq) {
+                                self.advance();
+                                Some(self.logical()?)
+                            } else {
+                                None
+                            };
+                            params.push(ParamDef { name: p, type_ann, default });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
@@ -1329,7 +1347,13 @@ impl Parser {
                         TokenKind::Identifier(p) => {
                             self.advance();
                             let type_ann = self.parse_type_ann()?;
-                            params.push(ParamDef { name: p, type_ann });
+                            let default = if self.check(&TokenKind::Eq) {
+                                self.advance();
+                                Some(self.logical()?)
+                            } else {
+                                None
+                            };
+                            params.push(ParamDef { name: p, type_ann, default });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
