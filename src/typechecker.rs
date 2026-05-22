@@ -752,6 +752,8 @@ impl TypeChecker {
                 self.current_line = op.line;
                 self.check_expr(right);
             }
+            Expr::IVar { .. } => {}
+            Expr::IVarSet { value, .. } => self.check_expr(value),
             Expr::Get { object, .. } | Expr::SafeGet { object, .. } => self.check_expr(object),
             Expr::Set {
                 object,

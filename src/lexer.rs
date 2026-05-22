@@ -52,6 +52,7 @@ impl Lexer {
                 | TokenKind::RightParen
                 | TokenKind::RightBracket
                 | TokenKind::RightBrace
+                | TokenKind::AtVar(_)
         )
     }
 
@@ -181,6 +182,22 @@ impl Lexer {
                 }
                 c if c.is_ascii_digit() => self.number(c),
                 c if c.is_ascii_alphabetic() || c == '_' => self.identifier(c),
+                '@' => {
+                    if self.is_at_end() || (!self.source[self.current].is_ascii_alphabetic() && self.source[self.current] != '_') {
+                        continue;
+                    }
+                    let first = self.advance();
+                    let mut name = String::from(first);
+                    while !self.is_at_end() {
+                        let ch = self.source[self.current];
+                        if ch.is_ascii_alphanumeric() || ch == '_' {
+                            name.push(self.advance());
+                        } else {
+                            break;
+                        }
+                    }
+                    TokenKind::AtVar(name)
+                }
                 '?' => TokenKind::Question,
                 _ => continue,
             };
