@@ -1,25 +1,7 @@
-use sapphire::compiler::compile;
-use sapphire::lexer::Lexer;
-use sapphire::parser::Parser;
-use sapphire::vm::{Vm, VmValue};
+mod support;
 
-fn eval(src: &str) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, std::path::PathBuf::new())
-        .run()
-        .expect("vm error")
-        .expect("empty stack")
-}
-
-fn parse_err_msg(src: &str) -> String {
-    let tokens = sapphire::lexer::Lexer::new(src).scan_tokens();
-    let err = sapphire::parser::Parser::new(tokens)
-        .parse()
-        .expect_err("expected parse error");
-    format!("{}", err)
-}
+use sapphire::vm::VmValue;
+use support::{eval, parse_err_msg};
 
 #[test]
 fn match_list_literal_element() {

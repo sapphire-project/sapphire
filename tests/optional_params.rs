@@ -1,26 +1,7 @@
-use sapphire::compiler::compile;
-use sapphire::lexer::Lexer;
-use sapphire::parser::Parser;
-use sapphire::vm::{Vm, VmError, VmValue};
+mod support;
 
-fn eval(src: &str) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, std::path::PathBuf::new())
-        .run()
-        .expect("vm error")
-        .expect("empty stack")
-}
-
-fn eval_err(src: &str) -> VmError {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, std::path::PathBuf::new())
-        .run()
-        .expect_err("expected vm error")
-}
+use sapphire::vm::{VmError, VmValue};
+use support::{eval, eval_err};
 
 #[test]
 fn optional_param_uses_default() {

@@ -1,28 +1,10 @@
 // Stdlib tests organized by class
 // This mirrors the stdlib/ directory structure (int.spr, float.spr, string.spr, etc.)
 
-use sapphire::compiler::compile;
-use sapphire::lexer::Lexer;
-use sapphire::parser::Parser;
-use sapphire::vm::{Vm, VmError, VmValue};
+mod support;
 
-fn eval(src: &str) -> VmValue {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    let mut vm = Vm::new(func, std::path::PathBuf::new());
-    vm.load_stdlib().expect("stdlib");
-    vm.run().expect("vm error").expect("empty stack")
-}
-
-fn eval_err(src: &str) -> VmError {
-    let tokens = Lexer::new(src).scan_tokens();
-    let stmts = Parser::new(tokens).parse().expect("parse error");
-    let func = compile(&stmts).expect("compile error");
-    let mut vm = Vm::new(func, std::path::PathBuf::new());
-    vm.load_stdlib().expect("stdlib");
-    vm.run().expect_err("expected vm error")
-}
+use sapphire::vm::VmValue;
+pub use support::{eval_bool, eval_int, eval_str, eval_stdlib as eval, eval_stdlib_err as eval_err};
 
 #[path = "stdlib/int.rs"]
 mod int;

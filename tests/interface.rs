@@ -1,50 +1,7 @@
-use sapphire::compiler::compile;
-use sapphire::lexer::Lexer;
-use sapphire::parser::Parser;
-use sapphire::typechecker::TypeChecker;
-use sapphire::vm::{Vm, VmValue};
-use std::path::PathBuf;
+mod support;
 
-fn parse(src: &str) -> Vec<sapphire::ast::Expr> {
-    let tokens = Lexer::new(src).scan_tokens();
-    Parser::new(tokens).parse().expect("parse error")
-}
-
-fn typecheck_ok(src: &str) {
-    let stmts = parse(src);
-    let errors = TypeChecker::check(&stmts);
-    assert!(errors.is_empty(), "unexpected type errors: {:?}", errors);
-}
-
-fn typecheck_err_msg(src: &str) -> String {
-    let stmts = parse(src);
-    let errors = TypeChecker::check(&stmts);
-    assert!(!errors.is_empty(), "expected type errors for:\n{src}");
-    errors[0].message.clone()
-}
-
-macro_rules! assert_typecheck_error {
-    ($src:expr, $($substring:expr),+ $(,)?) => {{
-        let msg = typecheck_err_msg($src);
-        $(
-        assert!(
-            msg.contains($substring),
-            "expected first type error to contain:\n{}\n\nmessage:\n{}",
-            $substring,
-            msg
-        );
-        )+
-    }};
-}
-
-fn eval(src: &str) -> VmValue {
-    let stmts = parse(src);
-    let func = compile(&stmts).expect("compile error");
-    Vm::new(func, PathBuf::new())
-        .run()
-        .expect("vm error")
-        .expect("empty stack")
-}
+use sapphire::vm::VmValue;
+use support::{eval, typecheck_ok};
 
 #[test]
 fn class_structurally_satisfies_interface_without_declaration() {

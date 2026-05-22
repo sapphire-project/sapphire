@@ -1,27 +1,4 @@
-use super::{VmValue, eval};
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-fn eval_int(src: &str) -> i64 {
-    match eval(src) {
-        VmValue::Int(n) => n,
-        other => panic!("expected Int, got {:?}", other),
-    }
-}
-
-fn eval_bool(src: &str) -> bool {
-    match eval(src) {
-        VmValue::Bool(b) => b,
-        other => panic!("expected Bool, got {:?}", other),
-    }
-}
-
-fn eval_str(src: &str) -> String {
-    match eval(src) {
-        VmValue::Str(s) => s,
-        other => panic!("expected Str, got {:?}", other),
-    }
-}
+use super::{eval_bool, eval_int, eval_str};
 
 // ── Instant ───────────────────────────────────────────────────────────────────
 
