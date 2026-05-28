@@ -1,5 +1,109 @@
 # Changelog
 
+## v0.9.0
+
+**Language**
+
+- Instance variables now use `@name` syntax — no `attr` declaration needed for internal state:
+
+```ruby
+# Before
+class Counter {
+  attr n
+  def inc { self.n = self.n + 1 }
+  def value { self.n }
+}
+Counter.new(n: 0)
+
+# After
+class Counter {
+  def inc { @n = (@n || 0) + 1 }
+  def value { @n || 0 }
+}
+Counter.new()
+```
+
+- Optional parameters with literal default values — omit a trailing argument and its default is used:
+
+```ruby
+def greet(name, prefix = "Hello") { prefix + ", " + name }
+greet("World")         # "Hello, World"
+greet("World", "Hi")   # "Hi, World"
+```
+
+- Private class methods — `defp` now works inside `self { }` blocks:
+
+```ruby
+class Calculator {
+  self {
+    def double(n) { self.scale(n) }
+    defp scale(n) { n * 2 }
+  }
+}
+```
+
+- Redesigned exception syntax — `try`/`rescue` now use braces; `else` runs when no exception is raised, `ensure` always runs:
+
+```ruby
+# Before
+begin
+  risky_operation()
+rescue e
+  handle(e)
+end
+
+# After
+try {
+  risky_operation()
+} rescue e {
+  handle(e)
+} else {
+  on_success()
+} ensure {
+  cleanup()
+}
+```
+
+- Abstract methods no longer use the `abstract` keyword — a bare `def` signature inside an `abstract class` declares the method as abstract:
+
+```ruby
+# Before
+abstract class Shape {
+  abstract def area -> Float
+}
+
+# After
+abstract class Shape {
+  def area -> Float
+}
+```
+
+- Type annotations are now enforced at runtime; `Int` values are automatically promoted to `Float` when passed to a `Float`-annotated parameter
+
+**Standard library**
+
+- `Enumerable` module — include it in any class that defines `each` to get `all?`, `any?`, `none?`, `find`, `include?`, `count`, `partition`, `sort_by`, and `reduce`:
+
+```ruby
+[1, 2, 3].any? { |n| n > 2 }                       # true
+[1, 2, 3, 4].reduce(0) { |acc, n| acc + n }         # 10
+[1, 2, 3, 4].partition { |n| n.even? }              # [[2, 4], [1, 3]]
+```
+
+- `CLI.parse` — parse command-line flags and positional arguments from an argv array:
+
+```ruby
+r = CLI.parse(["--verbose", "--out=log.txt", "file.txt"])
+r.options   # { "verbose" => true, "out" => "log.txt" }
+r.rest      # ["file.txt"]
+```
+
+- `File` — filesystem helpers: `File.read`, `File.write`, `File.join`, `File.basename`, `File.dirname`, `File.directory?`, and more
+
+- `IO` module — `IO.puts`, `IO.print`, and `IO.gets`
+
+---
+
 ## v0.8.0
 
 **Language**
