@@ -478,6 +478,8 @@ impl From<&Constant> for VmValue {
             Constant::Int(n) => VmValue::Int(*n),
             Constant::Float(n) => VmValue::Float(*n),
             Constant::Str(s) => VmValue::Str(s.clone()),
+            Constant::Bool(b) => VmValue::Bool(*b),
+            Constant::Nil => VmValue::Nil,
             Constant::Function(func) => VmValue::Function(func.clone()),
             Constant::ClassDesc { .. } => panic!("ClassDesc cannot be used as a stack value"),
             Constant::LexicalClassScope { .. } => {
@@ -609,6 +611,8 @@ struct ClassEntry {
     remaining_abstract: Vec<String>,
     /// The merged (inherited + own) field list with default values.
     fields: Vec<(String, VmValue)>,
+    /// Fields that have no default and must be supplied to `.new`.
+    required_fields: Vec<String>,
     /// Merged (inherited + own) instance methods.
     methods: Rc<HashMap<String, VmMethod>>,
     /// Merged (inherited + own) class methods.
@@ -1915,6 +1919,7 @@ impl Vm {
                         abstract_method_names,
                         includes,
                         own_fields,
+                        own_required,
                         class_method_names,
                         class_private_methods,
                         method_names,
@@ -1949,6 +1954,12 @@ impl Vm {
                                         )
                                     })
                                     .collect();
+                                let own_required: Vec<String> = field_names
+                                    .iter()
+                                    .zip(field_defaults.iter())
+                                    .filter(|(_, d)| d.is_none())
+                                    .map(|(n, _)| n.clone())
+                                    .collect();
                                 (
                                     name.clone(),
                                     superclass.clone(),
@@ -1958,6 +1969,7 @@ impl Vm {
                                     abstract_method_names.clone(),
                                     includes.clone(),
                                     own_fields,
+                                    own_required,
                                     class_method_names.clone(),
                                     class_private_methods.clone(),
                                     method_names.clone(),
@@ -2058,12 +2070,13 @@ impl Vm {
                         line,
                     )?;
                     // Merge inherited fields, instance methods, and class methods from superclass.
-                    let (merged_fields, mut merged_methods, mut merged_class_methods) =
+                    let (merged_fields, merged_required, mut merged_methods, mut merged_class_methods) =
                         if let Some(ref sname) = effective_super {
-                            let (parent_fields, parent_methods, parent_class_methods) =
+                            let (parent_fields, parent_required, parent_methods, parent_class_methods) =
                                 match self.classes.get(sname) {
                                     Some(entry) => (
                                         entry.fields.clone(),
+                                        entry.required_fields.clone(),
                                         (*entry.methods).clone(),
                                         (*entry.class_methods).clone(),
                                     ),
@@ -2076,11 +2089,13 @@ impl Vm {
                                 };
                             let mut mf = parent_fields;
                             mf.extend(own_fields);
+                            let mut mr = parent_required;
+                            mr.extend(own_required);
                             let mm = parent_methods;
                             let mc = parent_class_methods;
-                            (mf, mm, mc)
+                            (mf, mr, mm, mc)
                         } else {
-                            (own_fields, HashMap::new(), HashMap::new())
+                            (own_fields, own_required, HashMap::new(), HashMap::new())
                         };
                     // Overlay included modules (classes only).
                     if !is_module {
@@ -2136,6 +2151,7 @@ impl Vm {
                             declared_abstract: is_abstract_decl,
                             remaining_abstract: remaining_abstract.clone(),
                             fields: merged_fields.clone(),
+                            required_fields: merged_required.clone(),
                             methods: merged_rc.clone(),
                             class_methods: merged_class_rc.clone(),
                             namespace: namespace_rc.clone(),
@@ -2332,6 +2348,39 @@ impl Vm {
                         self.stack.push(result);
                         continue;
                     }
+                    // Validate constructor arguments before initialising fields.
+                    let required_fields = self
+                        .classes
+                        .get(&class_name)
+                        .map(|e| e.required_fields.clone())
+                        .unwrap_or_default();
+                    let mut provided: Vec<String> = Vec::new();
+                    for i in 0..n_pairs {
+                        match &self.stack[base + 1 + i * 2] {
+                            VmValue::Str(n) if n.is_empty() => {
+                                return Err(VmError::TypeError {
+                                    message: format!(
+                                        "{}.new requires keyword arguments",
+                                        class_name
+                                    ),
+                                    line,
+                                });
+                            }
+                            VmValue::Str(n) => provided.push(n.clone()),
+                            _ => {}
+                        }
+                    }
+                    for req in &required_fields {
+                        if !provided.contains(req) {
+                            return Err(VmError::TypeError {
+                                message: format!(
+                                    "{}.new requires attribute '{}'",
+                                    class_name, req
+                                ),
+                                line,
+                            });
+                        }
+                    }
                     // Initialise fields to their declared defaults (or nil if none).
                     let mut instance_fields: HashMap<String, VmValue> = field_decls
                         .iter()
@@ -2341,11 +2390,8 @@ impl Vm {
                     for i in 0..n_pairs {
                         let name_val = self.stack[base + 1 + i * 2].clone();
                         let val = self.stack[base + 2 + i * 2].clone();
-                        match name_val {
-                            VmValue::Str(ref n) if !n.is_empty() => {
-                                instance_fields.insert(n.clone(), val);
-                            }
-                            _ => {}
+                        if let VmValue::Str(ref n) = name_val {
+                            instance_fields.insert(n.clone(), val);
                         }
                     }
                     self.stack.drain(base..);

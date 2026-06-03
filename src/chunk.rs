@@ -246,6 +246,8 @@ pub enum Constant {
     Int(i64),
     Float(f64),
     Str(String),
+    Bool(bool),
+    Nil,
     Function(Rc<Function>),
     /// Static descriptor for a class: its name, optional superclass name,
     /// field names (in declaration order), and method names (in the same
@@ -310,6 +312,8 @@ impl std::fmt::Display for Constant {
             } => write!(f, "<abstract class {}>", name),
             Constant::ClassDesc { name, .. } => write!(f, "<class {}>", name),
             Constant::LexicalClassScope { .. } => write!(f, "<lexical class scope>"),
+            Constant::Bool(b) => write!(f, "{}", b),
+            Constant::Nil => write!(f, "nil"),
         }
     }
 }

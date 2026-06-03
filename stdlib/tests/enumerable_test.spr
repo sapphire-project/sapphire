@@ -1,7 +1,7 @@
 class Words {
   include(Enumerable)
 
-  attr items
+  attr items = nil
 
   def push(w) {
     if self.items == nil { self.items = [] }
