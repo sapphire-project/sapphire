@@ -2027,6 +2027,8 @@ impl Compiler {
                 Some(Expr::Literal(Value::Int(n))) => Some(Constant::Int(*n)),
                 Some(Expr::Literal(Value::Float(n))) => Some(Constant::Float(*n)),
                 Some(Expr::Literal(Value::Str(s))) => Some(Constant::Str(s.clone())),
+                Some(Expr::Literal(Value::Bool(b))) => Some(Constant::Bool(*b)),
+                Some(Expr::Literal(Value::Nil)) => Some(Constant::Nil),
                 _ => None,
             })
             .collect();
