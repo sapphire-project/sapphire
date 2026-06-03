@@ -530,7 +530,6 @@ impl Lexer {
             "yield" => TokenKind::Yield,
             "print" => TokenKind::Print,
             "raise" => TokenKind::Raise,
-            "begin" => TokenKind::Begin,
             "try" => TokenKind::Try,
             "rescue" => TokenKind::Rescue,
             "ensure" => TokenKind::Ensure,

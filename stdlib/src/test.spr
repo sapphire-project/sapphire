@@ -56,11 +56,11 @@ class Test {
   #
   def assert_raises {
     raised = false
-    begin
+    try {
       yield
-    rescue e
+    } rescue e {
       raised = true
-    end
+    }
     if !raised {
       raise("expected an exception but none was raised")
     }

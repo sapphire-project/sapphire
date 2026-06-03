@@ -63,7 +63,6 @@ pub enum TokenKind {
     Yield,
     Print,
     Raise,
-    Begin,
     Try,
     Rescue,
     Ensure,

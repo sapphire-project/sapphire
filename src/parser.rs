@@ -475,9 +475,6 @@ impl Parser {
             self.advance();
             return Ok(Expr::Raise(Box::new(self.logical()?)));
         }
-        if self.check(&TokenKind::Begin) {
-            return self.begin_expr();
-        }
         if self.check(&TokenKind::Try) {
             return self.try_expr();
         }
@@ -1445,38 +1442,6 @@ impl Parser {
         Ok(Expr::MultiAssign { names, values })
     }
 
-    fn begin_expr(&mut self) -> Result<Expr, SapphireError> {
-        self.advance(); // consume 'begin'
-        let mut body = Vec::new();
-        loop {
-            self.skip_terminators();
-            if self.check(&TokenKind::Rescue)
-                || self.check(&TokenKind::Else)
-                || self.check(&TokenKind::Ensure)
-                || self.check(&TokenKind::End)
-                || self.is_at_end()
-            {
-                break;
-            }
-            body.push(self.statement_without_inline_rescue()?);
-        }
-        let parts = self.parse_legacy_exception_clauses(&TokenKind::End)?;
-        if !self.check(&TokenKind::End) {
-            return Err(SapphireError::ParseError {
-                message: "expected 'end' to close 'begin'".into(),
-                line: self.peek().line,
-                column: self.peek().column,
-            });
-        }
-        self.advance(); // consume 'end'
-        Ok(Expr::Begin {
-            body,
-            rescue_clauses: parts.rescue_clauses,
-            else_body: parts.else_body,
-            ensure_body: parts.ensure_body,
-        })
-    }
-
     fn try_expr(&mut self) -> Result<Expr, SapphireError> {
         self.advance(); // consume 'try'
         let body = self.block()?;
@@ -1523,7 +1488,7 @@ impl Parser {
             || self.check(&TokenKind::Else)
             || self.check(&TokenKind::Ensure)
         {
-            let parts = self.parse_legacy_exception_clauses(&TokenKind::RightBrace)?;
+            let parts = self.parse_unbraced_exception_clauses(&TokenKind::RightBrace)?;
             if !self.check(&TokenKind::RightBrace) {
                 return Err(SapphireError::ParseError {
                     message: "expected '}'".into(),
@@ -1598,7 +1563,7 @@ impl Parser {
         })
     }
 
-    fn parse_legacy_exception_clauses(
+    fn parse_unbraced_exception_clauses(
         &mut self,
         end: &TokenKind,
     ) -> Result<ExceptionParts, SapphireError> {
@@ -1708,9 +1673,6 @@ impl Parser {
     fn logical(&mut self) -> Result<Expr, SapphireError> {
         if self.check(&TokenKind::If) {
             return self.if_expr();
-        }
-        if self.check(&TokenKind::Begin) {
-            return self.begin_expr();
         }
         if self.check(&TokenKind::Try) {
             return self.try_expr();

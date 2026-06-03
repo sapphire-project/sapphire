@@ -11,32 +11,6 @@ fn raise_unhandled() {
 }
 
 #[test]
-fn begin_rescue_catches_runtime_error() {
-    let src = "x = 0\nbegin\nx = 1 / 0\nrescue e\nx = 99\nend\nx";
-    assert_eq!(eval(src), VmValue::Int(99));
-}
-
-#[test]
-fn begin_else_skipped_on_error() {
-    let src = r#"x = 0
-begin
-  raise "err"
-rescue e
-  x = 99
-else
-  x = 2
-end
-x"#;
-    assert_eq!(eval(src), VmValue::Int(99));
-}
-
-#[test]
-fn begin_no_error_skips_rescue() {
-    let src = "x = 0\nbegin\nx = 42\nrescue e\nx = 1\nend\nx";
-    assert_eq!(eval(src), VmValue::Int(42));
-}
-
-#[test]
 fn try_rescue_else_ensure() {
     let src = r#"x = 0
 result = try {
@@ -189,11 +163,11 @@ Safe.new().try_div(0)"#;
 #[test]
 fn raise_instance() {
     let src = r#"class Err { attr msg }
-result = begin
+result = try {
   raise Err.new(msg: "bad")
-rescue e
+} rescue e {
   e.msg
-end
+}
 result"#;
     assert_eq!(eval(src), VmValue::Str("bad".into()));
 }
