@@ -292,17 +292,14 @@ fn run_tests(path: &str) {
 fn is_input_complete(source: &str) -> bool {
     let tokens = lexer::Lexer::new(source).scan_tokens();
     let mut depth: i32 = 0;
-    let mut begin_depth: i32 = 0;
     for token in &tokens {
         match &token.kind {
             TokenKind::LeftBrace | TokenKind::LeftParen | TokenKind::LeftBracket => depth += 1,
             TokenKind::RightBrace | TokenKind::RightParen | TokenKind::RightBracket => depth -= 1,
-            TokenKind::Begin => begin_depth += 1,
-            TokenKind::End => begin_depth -= 1,
             _ => {}
         }
     }
-    depth <= 0 && begin_depth <= 0
+    depth <= 0
 }
 
 #[cfg(feature = "cli")]

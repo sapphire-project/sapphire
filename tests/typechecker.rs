@@ -199,18 +199,18 @@ fn infer_while_nil_catches_caller_mismatch() {
 }
 
 #[test]
-fn infer_begin_type_no_rescue() {
+fn infer_try_type_no_rescue() {
     let types = check_types_ok(
-        "def f() { begin\n42\nend }\n\
+        "def f() { try { 42 } }\n\
          def caller() -> Int { f() }",
     );
     assert_function_returns!(types, "f", Int);
 }
 
 #[test]
-fn infer_begin_type_catches_caller_mismatch() {
+fn infer_try_type_catches_caller_mismatch() {
     assert_typecheck_error!(
-        "def f() { begin\n42\nend }\n\
+        "def f() { try { 42 } }\n\
          def caller() -> String { f() }",
         "expected String",
         "got Int"
@@ -218,8 +218,8 @@ fn infer_begin_type_catches_caller_mismatch() {
 }
 
 #[test]
-fn infer_begin_type_with_rescue_no_inference() {
-    typecheck_ok("def f() { begin\n42\nrescue e\n0\nend }\nf()");
+fn infer_try_type_with_rescue_no_inference() {
+    typecheck_ok("def f() { try { 42 } rescue e { 0 } }\nf()");
 }
 
 #[test]

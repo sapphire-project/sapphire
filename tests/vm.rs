@@ -326,12 +326,12 @@ add5(1) + add10(1)";
 #[test]
 fn raise_caught_by_rescue() {
     let src = r#"x = 0
-begin
+try {
   raise "boom"
   x = 1
-rescue e
+} rescue e {
   x = 2
-end
+}
 x"#;
     assert_eq!(eval(src), VmValue::Int(2));
 }
@@ -339,11 +339,11 @@ x"#;
 #[test]
 fn rescue_variable_bound() {
     let src = r#"msg = ""
-begin
+try {
   raise "hello"
-rescue e
+} rescue e {
   msg = e
-end
+}
 msg"#;
     assert_eq!(eval(src), VmValue::Str("hello".into()));
 }
@@ -351,27 +351,15 @@ msg"#;
 #[test]
 fn rescue_else_runs_on_no_error() {
     let src = r#"x = 0
-begin
+try {
   x = 1
-rescue e
+} rescue e {
   x = 99
-else
+} else {
   x = x + 10
-end
+}
 x"#;
     assert_eq!(eval(src), VmValue::Int(11));
-}
-
-#[test]
-fn begin_expr_value_assigned() {
-    let src = "x = begin 7 end\nx";
-    assert_eq!(eval(src), VmValue::Int(7));
-}
-
-#[test]
-fn begin_expr_else_value() {
-    let src = "x = begin 1 rescue e 0 else 2 end\nx";
-    assert_eq!(eval(src), VmValue::Int(2));
 }
 
 #[test]
@@ -1870,13 +1858,6 @@ fn infer_if_type_string_branches() {
         eval("def label(x: Int) { if x > 0 { \"pos\" } else { \"non-pos\" } }\nlabel(1)"),
         VmValue::Str("pos".into()),
     );
-}
-
-// ── Infer `begin` expression types ───────────────────────────────────────────
-
-#[test]
-fn infer_begin_runtime() {
-    assert_eq!(eval("def f() { begin\n99\nend }\nf()"), VmValue::Int(99));
 }
 
 // ── Infer `assign` expression types ──────────────────────────────────────────
