@@ -185,7 +185,7 @@ impl Trace for HeapObject {
 /// Push all GcRefs contained directly in `val` into `out`.
 fn collect_refs(val: &VmValue, out: &mut Vec<GcRef>) {
     match val {
-        VmValue::List(r) | VmValue::Map(r) | VmValue::Set(r) | VmValue::ClassObj(r) => out.push(*r),
+        VmValue::List(r) | VmValue::Map(r) | VmValue::Set(r) | VmValue::ClassObj(r, _) => out.push(*r),
         VmValue::Instance { fields, .. } => out.push(*fields),
         _ => {}
     }
@@ -410,7 +410,7 @@ pub enum VmValue {
         methods: Rc<HashMap<String, VmMethod>>,
     },
     /// A heap-allocated class object in the Ruby-style object model.
-    ClassObj(GcRef),
+    ClassObj(GcRef, String),
 }
 
 /// A compiled method: a function together with any upvalues it closed over,
@@ -445,7 +445,7 @@ impl PartialEq for VmValue {
             (VmValue::Instance { fields: f1, .. }, VmValue::Instance { fields: f2, .. }) => {
                 f1 == f2
             }
-            (VmValue::ClassObj(a), VmValue::ClassObj(b)) => a == b,
+            (VmValue::ClassObj(a, _), VmValue::ClassObj(b, _)) => a == b,
             _ => false,
         }
     }
@@ -467,7 +467,7 @@ impl fmt::Display for VmValue {
             VmValue::Range { from, to } => write!(f, "{}..{}", from, to),
             VmValue::Class { name, .. } => write!(f, "<class {}>", name),
             VmValue::Instance { class_name, .. } => write!(f, "#<{}>", class_name),
-            VmValue::ClassObj(_) => write!(f, "<class>"),
+            VmValue::ClassObj(_, name) => write!(f, "{}", name),
         }
     }
 }
@@ -810,7 +810,7 @@ impl Vm {
                 false
             }
             VmValue::Class { name, .. } => class_name == "Class" || name == class_name,
-            VmValue::ClassObj(_) => class_name == "Class",
+            VmValue::ClassObj(_, _) => class_name == "Class",
             VmValue::Function(_) | VmValue::Closure { .. } => class_name == "Function",
         }
     }
@@ -1599,34 +1599,34 @@ impl Vm {
         // objects rather than old-style VmValue::Class entries.
         let cc = self.core_classes.clone();
         if let Some(r) = cc.object {
-            self.globals.insert("Object".into(), VmValue::ClassObj(r));
+            self.globals.insert("Object".into(), VmValue::ClassObj(r, "Object".into()));
         }
         if let Some(r) = cc.class_cls {
-            self.globals.insert("Class".into(), VmValue::ClassObj(r));
+            self.globals.insert("Class".into(), VmValue::ClassObj(r, "Class".into()));
         }
         if let Some(r) = cc.set_cls {
-            self.globals.insert("Set".into(), VmValue::ClassObj(r));
+            self.globals.insert("Set".into(), VmValue::ClassObj(r, "Set".into()));
         }
         if let Some(r) = cc.nil_cls {
-            self.globals.insert("Nil".into(), VmValue::ClassObj(r));
+            self.globals.insert("Nil".into(), VmValue::ClassObj(r, "Nil".into()));
         }
         if let Some(r) = cc.int_cls {
-            self.globals.insert("Int".into(), VmValue::ClassObj(r));
+            self.globals.insert("Int".into(), VmValue::ClassObj(r, "Int".into()));
         }
         if let Some(r) = cc.float_cls {
-            self.globals.insert("Float".into(), VmValue::ClassObj(r));
+            self.globals.insert("Float".into(), VmValue::ClassObj(r, "Float".into()));
         }
         if let Some(r) = cc.string_cls {
-            self.globals.insert("String".into(), VmValue::ClassObj(r));
+            self.globals.insert("String".into(), VmValue::ClassObj(r, "String".into()));
         }
         if let Some(r) = cc.range_cls {
-            self.globals.insert("Range".into(), VmValue::ClassObj(r));
+            self.globals.insert("Range".into(), VmValue::ClassObj(r, "Range".into()));
         }
         if let Some(r) = cc.list_cls {
-            self.globals.insert("List".into(), VmValue::ClassObj(r));
+            self.globals.insert("List".into(), VmValue::ClassObj(r, "List".into()));
         }
         if let Some(r) = cc.map_cls {
-            self.globals.insert("Map".into(), VmValue::ClassObj(r));
+            self.globals.insert("Map".into(), VmValue::ClassObj(r, "Map".into()));
         }
         Ok(())
     }
@@ -2196,7 +2196,7 @@ impl Vm {
                                 .unwrap_or_else(|| Rc::new(vec![name.clone()]));
                             (name.clone(), fields.clone(), methods.clone(), anc)
                         }
-                        VmValue::ClassObj(r) => {
+                        VmValue::ClassObj(r, _) => {
                             let r = *r;
                             let name = match self.heap.get(r) {
                                 HeapObject::ClassObject { name, .. } => name.clone(),
@@ -2497,24 +2497,29 @@ impl Vm {
                         let recv = self.stack[recv_slot].clone();
                         // For bootstrapped types, return the heap-allocated ClassObj.
                         let bootstrapped = match &recv {
-                            VmValue::Float(_) => self.core_classes.float_cls.map(VmValue::ClassObj),
-                            VmValue::Int(_) => self.core_classes.int_cls.map(VmValue::ClassObj),
-                            VmValue::Nil => self.core_classes.nil_cls.map(VmValue::ClassObj),
-                            VmValue::Set(_) => self.core_classes.set_cls.map(VmValue::ClassObj),
-                            VmValue::Str(_) => self.core_classes.string_cls.map(VmValue::ClassObj),
+                            VmValue::Float(_) => self.core_classes.float_cls.map(|r| VmValue::ClassObj(r, "Float".into())),
+                            VmValue::Int(_) => self.core_classes.int_cls.map(|r| VmValue::ClassObj(r, "Int".into())),
+                            VmValue::Nil => self.core_classes.nil_cls.map(|r| VmValue::ClassObj(r, "Nil".into())),
+                            VmValue::Set(_) => self.core_classes.set_cls.map(|r| VmValue::ClassObj(r, "Set".into())),
+                            VmValue::Str(_) => self.core_classes.string_cls.map(|r| VmValue::ClassObj(r, "String".into())),
                             VmValue::Range { .. } => {
-                                self.core_classes.range_cls.map(VmValue::ClassObj)
+                                self.core_classes.range_cls.map(|r| VmValue::ClassObj(r, "Range".into()))
                             }
-                            VmValue::List(_) => self.core_classes.list_cls.map(VmValue::ClassObj),
-                            VmValue::Map(_) => self.core_classes.map_cls.map(VmValue::ClassObj),
-                            VmValue::ClassObj(r) => {
+                            VmValue::List(_) => self.core_classes.list_cls.map(|r| VmValue::ClassObj(r, "List".into())),
+                            VmValue::Map(_) => self.core_classes.map_cls.map(|r| VmValue::ClassObj(r, "Map".into())),
+                            VmValue::ClassObj(r, _) => {
                                 let r = *r;
                                 if let HeapObject::ClassObject {
                                     class_ref: Some(cr),
                                     ..
                                 } = self.heap.get(r)
                                 {
-                                    Some(VmValue::ClassObj(*cr))
+                                    let cr = *cr;
+                                    let name = match self.heap.get(cr) {
+                                        HeapObject::ClassObject { name, .. } => name.clone(),
+                                        _ => "Class".into(),
+                                    };
+                                    Some(VmValue::ClassObj(cr, name))
                                 } else {
                                     None
                                 }
@@ -2586,7 +2591,7 @@ impl Vm {
                     }
 
                     // ClassObj method dispatch: receiver is a bootstrapped ClassObject.
-                    if let VmValue::ClassObj(class_obj_ref) = self.stack[recv_slot].clone() {
+                    if let VmValue::ClassObj(class_obj_ref, _) = self.stack[recv_slot].clone() {
                         let result = if method_name == "name" && arg_count == 0 {
                             let name = match self.heap.get(class_obj_ref) {
                                 HeapObject::ClassObject { name, .. } => name.clone(),
@@ -2599,7 +2604,13 @@ impl Vm {
                                 _ => unreachable!(),
                             };
                             match superclass_ref {
-                                Some(r) => VmValue::ClassObj(r),
+                                Some(r) => {
+                                    let name = match self.heap.get(r) {
+                                        HeapObject::ClassObject { name, .. } => name.clone(),
+                                        _ => "Class".into(),
+                                    };
+                                    VmValue::ClassObj(r, name)
+                                }
                                 None => VmValue::Nil,
                             }
                         } else {
@@ -4871,7 +4882,7 @@ fn invoke_is_a(
 ) -> Result<VmValue, VmError> {
     let target = match args.first() {
         Some(VmValue::Class { name, .. }) => name.clone(),
-        Some(VmValue::ClassObj(r)) => match heap.get(*r) {
+        Some(VmValue::ClassObj(r, _)) => match heap.get(*r) {
             HeapObject::ClassObject { name, .. } => name.clone(),
             _ => {
                 return Err(VmError::TypeError {
