@@ -7,6 +7,9 @@ use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
 
+/// Stdlib functions available as standalone globals (callable without a receiver at any scope).
+const STDLIB_GLOBALS: &[&str] = &["puts"];
+
 // ── Error ─────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, PartialEq)]
@@ -636,6 +639,7 @@ impl Compiler {
                 } else if self.global_mode
                     || self.has_imports
                     || name.starts_with(|c: char| c.is_uppercase())
+                    || STDLIB_GLOBALS.contains(&name.as_str())
                 {
                     self.emit_maybe_lexical_or_global(name);
                 } else {
@@ -958,11 +962,6 @@ impl Compiler {
                 Ok(())
             }
 
-            Expr::Print(inner) => {
-                self.expr(inner)?;
-                self.emit(OpCode::Print);
-                Ok(())
-            }
 
             Expr::Class {
                 name,

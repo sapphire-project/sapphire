@@ -705,15 +705,6 @@ fn or_returns_rhs_when_falsy() {
     assert_eq!(eval("nil || nil"), VmValue::Nil);
 }
 
-#[test]
-fn print_does_not_change_result_when_not_last_statement() {
-    assert_eq!(eval("print 42\n99"), VmValue::Int(99));
-}
-
-#[test]
-fn implicit_return_last_print_passes_printed_value() {
-    assert_eq!(eval("def f() { print 42 }\nf()"), VmValue::Int(42));
-}
 
 #[test]
 fn implicit_return_last_def_returns_method_name() {

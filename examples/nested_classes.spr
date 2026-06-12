@@ -38,14 +38,14 @@ class Geometry {
 
 origin = Geometry.Point.new(x: 0, y: 0)
 corner = Geometry.Point.new(x: 3, y: 4)
-print "Origin: #{origin.to_s}"
-print "Corner: #{corner.to_s}"
-print "Squared distance: #{origin.distance_to(corner)}"
+puts("Origin: #{origin.to_s}")
+puts("Corner: #{corner.to_s}")
+puts("Squared distance: #{origin.distance_to(corner)}")
 
 tl = Geometry.Point.new(x: 1, y: 1)
 br = Geometry.Point.new(x: 5, y: 4)
 rect = Geometry.Rectangle.new(top_left: tl, bottom_right: br)
-print "Rectangle #{rect.width}x#{rect.height}, area=#{rect.area}"
+puts("Rectangle #{rect.width}x#{rect.height}, area=#{rect.area}")
 
 # Nested class as a superclass via dot notation
 class Animals {
@@ -76,6 +76,6 @@ class Cat < Animals.Animal {
 
 d = Dog.new(name: "Rex")
 c = Cat.new(name: "Whiskers")
-print d.introduce
-print c.introduce
-print d.is_a?(Animals.Animal)
+puts(d.introduce)
+puts(c.introduce)
+puts(d.is_a?(Animals.Animal))

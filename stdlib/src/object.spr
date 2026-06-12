@@ -15,4 +15,6 @@ class Object {
   #   o.to_s   # "#<Object>"
   #
   def to_s { "#<#{self.class.name}>" }
+
+  def puts(val) { IO.puts(val) }
 }

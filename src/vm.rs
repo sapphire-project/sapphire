@@ -1632,6 +1632,16 @@ impl Vm {
         if let Some(r) = cc.map_cls {
             self.globals.insert("Map".into(), VmValue::ClassObj(r, "Map".into()));
         }
+        // Register `puts` as a standalone global so it can be called without an explicit receiver.
+        if let Some(method) = self.classes.get("Object").and_then(|e| e.methods.get("puts")).cloned() {
+            self.globals.insert(
+                "puts".to_string(),
+                VmValue::Closure {
+                    function: method.function,
+                    upvalues: method.upvalues,
+                },
+            );
+        }
         Ok(())
     }
 
@@ -3898,12 +3908,6 @@ impl Vm {
                     self.stack.push(VmValue::Bool(matches));
                 }
 
-                OpCode::Print => {
-                    let val = self.pop()?;
-                    let s = self.format_value(&val);
-                    crate::output::emit_line(&s);
-                    self.stack.push(val);
-                }
 
                 OpCode::GetGlobal(idx) => {
                     let name = match &self.frames.last().unwrap().function.chunk.constants[idx] {

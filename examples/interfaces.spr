@@ -20,7 +20,7 @@ class Badge {
 
 class StringSink {
   def push(value: String) -> Nil {
-    print value
+    puts(value)
     nil
   }
 }
