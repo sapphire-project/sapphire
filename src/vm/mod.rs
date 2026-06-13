@@ -5,11 +5,14 @@ use crate::native::{
     vm_value_partial_cmp,
 };
 use crate::value::Value;
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::PathBuf;
 use std::rc::Rc;
+
+mod value;
+
+pub use value::{NativeArity, SapphireMethod, Upvalue, UpvalueState};
 
 fn runtime_type_display(rt: &RuntimeType) -> String {
     match rt {
@@ -91,42 +94,6 @@ fn runtime_type_matches(value: &VmValue, expected: &RuntimeType) -> bool {
 /// Rust function pointer for a native instance method on a `ClassObject`.
 pub type NativeFn =
     fn(&mut GcHeap<HeapObject>, &VmValue, &[VmValue], u32) -> Result<VmValue, VmError>;
-
-/// Inclusive arity bounds for a [`SapphireMethod::Native`] (`min`..=`max` arguments).
-#[derive(Clone, Copy)]
-pub struct NativeArity {
-    pub min: usize,
-    pub max: usize,
-}
-
-impl From<usize> for NativeArity {
-    fn from(n: usize) -> Self {
-        Self { min: n, max: n }
-    }
-}
-
-impl NativeArity {
-    /// Sentinel `max` meaning “no upper bound” (arity is `min` or more).
-    pub const VARIADIC_MAX: usize = usize::MAX;
-
-    pub fn at_least(min: usize) -> Self {
-        Self {
-            min,
-            max: Self::VARIADIC_MAX,
-        }
-    }
-}
-
-/// A method that lives in a `ClassObject` method table.
-#[derive(Clone)]
-pub enum SapphireMethod {
-    Bytecode(VmMethod),
-    Native {
-        min_arity: usize,
-        max_arity: usize,
-        func: NativeFn,
-    },
-}
 
 /// Objects managed by the GC heap — all types that can form reference cycles.
 pub enum HeapObject {
@@ -333,33 +300,6 @@ pub fn format_value_with_heap(heap: &GcHeap<HeapObject>, val: &VmValue) -> Strin
     }
 }
 
-// ── Upvalue ───────────────────────────────────────────────────────────────────
-
-/// The heap-allocated cell shared between a closure and the variable it captures.
-/// While the captured variable is still live on the stack the upvalue is "open"
-/// (holds a stack index).  When the enclosing frame returns the upvalue is
-/// "closed": the value is copied out of the stack into the cell itself.
-#[derive(Debug, Clone)]
-pub enum UpvalueState {
-    Open(usize), // index into Vm::stack
-    Closed(VmValue),
-}
-
-#[derive(Debug, Clone)]
-pub struct Upvalue(pub Rc<RefCell<UpvalueState>>);
-
-impl Upvalue {
-    fn new_open(stack_idx: usize) -> Self {
-        Upvalue(Rc::new(RefCell::new(UpvalueState::Open(stack_idx))))
-    }
-}
-
-impl PartialEq for Upvalue {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
-    }
-}
-
 // ── Runtime value ─────────────────────────────────────────────────────────────
 
 /// Values that live on the VM stack.
@@ -447,27 +387,6 @@ impl PartialEq for VmValue {
             }
             (VmValue::ClassObj(a, _), VmValue::ClassObj(b, _)) => a == b,
             _ => false,
-        }
-    }
-}
-
-impl fmt::Display for VmValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            VmValue::Int(n) => write!(f, "{}", n),
-            VmValue::Float(n) => write!(f, "{}", n),
-            VmValue::Str(s) => write!(f, "{}", s),
-            VmValue::Bool(b) => write!(f, "{}", b),
-            VmValue::Nil => write!(f, "nil"),
-            VmValue::Function(func) => write!(f, "<fn {}>", func.name),
-            VmValue::Closure { function, .. } => write!(f, "<fn {}>", function.name),
-            VmValue::List(_) => write!(f, "<list>"),
-            VmValue::Map(_) => write!(f, "<map>"),
-            VmValue::Set(_) => write!(f, "<set>"),
-            VmValue::Range { from, to } => write!(f, "{}..{}", from, to),
-            VmValue::Class { name, .. } => write!(f, "<class {}>", name),
-            VmValue::Instance { class_name, .. } => write!(f, "#<{}>", class_name),
-            VmValue::ClassObj(_, name) => write!(f, "{}", name),
         }
     }
 }
