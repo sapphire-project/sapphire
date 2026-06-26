@@ -13,6 +13,7 @@ pub mod native_file;
 pub mod native_float;
 pub mod native_io;
 pub mod native_int;
+pub mod native_json;
 pub mod native_math;
 pub mod native_list;
 pub mod native_map;
