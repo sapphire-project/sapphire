@@ -1,0 +1,14 @@
+class JsonTest < Test {
+  def test_parse_null {
+    assert_nil(JSON.parse("null"))
+  }
+
+  def test_parse_bool {
+    assert_equal(true, JSON.parse("true"))
+    assert_equal(false, JSON.parse("false"))
+  }
+
+  def test_parse_string {
+    assert_equal("foo", JSON.parse("\"foo\""))
+  }
+}

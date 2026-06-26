@@ -507,6 +507,7 @@ pub struct CoreClasses {
     pub dir_cls: Option<GcRef>,
     pub math_cls: Option<GcRef>,
     pub io_cls: Option<GcRef>,
+    pub json_cls: Option<GcRef>,
 }
 
 /// Per-class metadata stored by DefClass.
@@ -1174,6 +1175,7 @@ impl Vm {
             self.core_classes.dir_cls,
             self.core_classes.math_cls,
             self.core_classes.io_cls,
+            self.core_classes.json_cls,
         ]
         .into_iter()
         .flatten()
@@ -1299,11 +1301,18 @@ impl Vm {
             methods: HashMap::new(),
             class_methods: HashMap::new(),
         });
+        let json_cls = self.heap.alloc(HeapObject::ClassObject {
+            name: "JSON".into(),
+            superclass: Some(object),
+            class_ref: None,
+            methods: HashMap::new(),
+            class_methods: HashMap::new(),
+        });
 
         // Two-phase fixup: set class_ref now that class_cls is known.
         for r in [
             object, class_cls, set_cls, nil_cls, int_cls, float_cls, string_cls, range_cls,
-            list_cls, map_cls, env_cls, file_cls, dir_cls, math_cls, io_cls,
+            list_cls, map_cls, env_cls, file_cls, dir_cls, math_cls, io_cls, json_cls,
         ] {
             if let HeapObject::ClassObject { class_ref, .. } = self.heap.get_mut(r) {
                 *class_ref = Some(class_cls);
@@ -1326,6 +1335,7 @@ impl Vm {
             dir_cls: Some(dir_cls),
             math_cls: Some(math_cls),
             io_cls: Some(io_cls),
+            json_cls: Some(json_cls),
         };
         crate::native_set::register_methods(&mut self.heap, set_cls);
         crate::native_set::register_class_methods(&mut self.heap, set_cls);
@@ -1341,6 +1351,7 @@ impl Vm {
         crate::native_map::register_methods(&mut self.heap, map_cls);
         crate::native_math::register_class_methods(&mut self.heap, math_cls);
         crate::native_io::register_class_methods(&mut self.heap, io_cls);
+        crate::native_json::register_class_methods(&mut self.heap, json_cls);
     }
 
     /// Bootstrapped `ClassObject` for this primitive receiver, if any.
@@ -1423,6 +1434,7 @@ impl Vm {
             "Dir" => self.core_classes.dir_cls,
             "Math" => self.core_classes.math_cls,
             "IO" => self.core_classes.io_cls,
+            "JSON" => self.core_classes.json_cls,
             _ => None,
         }
     }
@@ -1456,6 +1468,7 @@ impl Vm {
             ("stdlib/dir.spr", include_str!("../../stdlib/src/dir.spr")),
             ("stdlib/env.spr", include_str!("../../stdlib/src/env.spr")),
             ("stdlib/io.spr", include_str!("../../stdlib/src/io.spr")),
+            ("stdlib/json.spr", include_str!("../../stdlib/src/json.spr")),
             (
                 "stdlib/process.spr",
                 include_str!("../../stdlib/src/process.spr"),
