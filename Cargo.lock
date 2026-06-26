@@ -575,6 +575,7 @@ dependencies = [
  "jiff",
  "regex",
  "rustyline",
+ "serde",
  "serde_json",
  "wasm-bindgen",
 ]

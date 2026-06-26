@@ -30,6 +30,7 @@ console_error_panic_hook = { version = "0.1", optional = true }
 jiff = { version = "0.2", features = ["tzdb-bundle-always", "std", "tz-system"], default-features = false }
 regex = "1"
 serde_json = "1"
+serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

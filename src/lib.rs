@@ -29,6 +29,7 @@ pub mod token;
 pub mod typechecker;
 pub mod value;
 pub mod vm;
+pub mod doc;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
