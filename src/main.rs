@@ -41,6 +41,8 @@ fn main() {
         [_, cmd, path] if cmd == "typecheck" => typecheck_file(path),
         [_, cmd, path] if cmd == "test" => run_tests(path),
         [_, cmd] if cmd == "test" => run_tests("."),
+        [_, cmd, path] if cmd == "doc" => generate_doc(path),
+        [_, cmd] if cmd == "doc" => generate_doc("."),
         #[cfg(feature = "cli")]
         [_, cmd] if cmd == "console" => run_repl(),
         [_, cmd] if cmd == "version" => println!("sapphire {}", env!("CARGO_PKG_VERSION")),
@@ -50,6 +52,7 @@ fn main() {
             eprintln!("  run <file.spr>       Run a Sapphire file");
             eprintln!("  typecheck <file.spr> Type-check a file");
             eprintln!("  test [path]          Run tests (file or directory)");
+            eprintln!("  doc [path]           Generate JSON documentation for a directory or file");
             eprintln!("  console              Start the REPL");
             eprintln!("  version              Print the version");
             std::process::exit(1);
@@ -378,3 +381,68 @@ fn run_repl() {
         }
     }
 }
+
+fn generate_doc(path: &str) {
+    let files = collect_doc_files(path);
+    if files.is_empty() {
+        eprintln!("No sapphire files found in '{}'", path);
+        std::process::exit(1);
+    }
+    
+    let mut docs = std::collections::BTreeMap::new();
+    for file_path in &files {
+        let source = match std::fs::read_to_string(file_path) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("error reading '{}': {}", file_path.display(), e);
+                std::process::exit(1);
+            }
+        };
+        let tokens = lexer::Lexer::new(&source).scan_tokens();
+        let exprs = match parser::Parser::new(tokens).parse() {
+            Ok(s) => s,
+            Err(e) => {
+                display_parse_error(&e, &source, &file_path.to_string_lossy());
+                std::process::exit(1);
+            }
+        };
+        
+        let file_doc = sapphire::doc::extract_file_doc(&exprs);
+        let path_str = file_path.to_string_lossy().into_owned();
+        docs.insert(path_str, file_doc);
+    }
+    
+    match serde_json::to_string_pretty(&docs) {
+        Ok(json_str) => println!("{}", json_str),
+        Err(e) => {
+            eprintln!("error generating JSON: {}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn collect_doc_files(path: &str) -> Vec<std::path::PathBuf> {
+    let p = std::path::Path::new(path);
+    if p.is_file() {
+        return vec![p.to_path_buf()];
+    }
+    let mut files = Vec::new();
+    collect_doc_files_recursive(p, &mut files);
+    files.sort();
+    files
+}
+
+fn collect_doc_files_recursive(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_doc_files_recursive(&path, out);
+        } else if path.extension().is_some_and(|e| e == "spr") {
+            out.push(path);
+        }
+    }
+}
+
