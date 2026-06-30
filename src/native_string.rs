@@ -1,5 +1,5 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_method, HeapObject, NativeArity, VmError, VmValue};
+use crate::vm::{HeapObject, NativeArity, VmError, VmValue, define_native_method};
 
 fn str_recv(recv: &VmValue) -> &str {
     match recv {
@@ -111,9 +111,9 @@ pub fn string_replace(
 ) -> Result<VmValue, VmError> {
     let s = str_recv(recv);
     match args {
-        [VmValue::Str(from), VmValue::Str(to)] => Ok(VmValue::Str(
-            s.replacen(from.as_str(), to.as_str(), 1),
-        )),
+        [VmValue::Str(from), VmValue::Str(to)] => {
+            Ok(VmValue::Str(s.replacen(from.as_str(), to.as_str(), 1)))
+        }
         [_, _] => Err(VmError::TypeError {
             message: "replace expects two Strings".to_string(),
             line,
@@ -239,7 +239,9 @@ pub fn string_to_f(
     _args: &[VmValue],
     _line: u32,
 ) -> Result<VmValue, VmError> {
-    Ok(VmValue::Float(str_recv(recv).trim().parse::<f64>().unwrap_or(0.0)))
+    Ok(VmValue::Float(
+        str_recv(recv).trim().parse::<f64>().unwrap_or(0.0),
+    ))
 }
 
 pub fn string_to_i(
@@ -248,7 +250,9 @@ pub fn string_to_i(
     _args: &[VmValue],
     _line: u32,
 ) -> Result<VmValue, VmError> {
-    Ok(VmValue::Int(str_recv(recv).trim().parse::<i64>().unwrap_or(0)))
+    Ok(VmValue::Int(
+        str_recv(recv).trim().parse::<i64>().unwrap_or(0),
+    ))
 }
 
 pub fn string_to_s(
@@ -293,7 +297,13 @@ pub fn register_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
     define_native_method(heap, class_ref, "size", 0, string_size);
     define_native_method(heap, class_ref, "slice", 2, string_slice);
     define_native_method(heap, class_ref, "starts_with?", 1, string_starts_with_q);
-    define_native_method(heap, class_ref, "split", NativeArity { min: 0, max: 1 }, string_split);
+    define_native_method(
+        heap,
+        class_ref,
+        "split",
+        NativeArity { min: 0, max: 1 },
+        string_split,
+    );
     define_native_method(heap, class_ref, "to_f", 0, string_to_f);
     define_native_method(heap, class_ref, "to_i", 0, string_to_i);
     define_native_method(heap, class_ref, "to_s", 0, string_to_s);

@@ -77,10 +77,7 @@ fn test_heredoc_interpolation() {
     assert_eq!(
         scan(src),
         vec![
-            TokenKind::StringInterp(vec![
-                ("hello ".into(), false),
-                ("name".into(), true),
-            ]),
+            TokenKind::StringInterp(vec![("hello ".into(), false), ("name".into(), true),]),
             TokenKind::Eof
         ]
     );
@@ -91,7 +88,10 @@ fn test_heredoc_empty_line_preserved() {
     let src = "\"\"\"\n    hello\n\n    world\n    \"\"\"";
     assert_eq!(
         scan(src),
-        vec![TokenKind::StringLit("hello\n\nworld".into()), TokenKind::Eof]
+        vec![
+            TokenKind::StringLit("hello\n\nworld".into()),
+            TokenKind::Eof
+        ]
     );
 }
 

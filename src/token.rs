@@ -74,8 +74,8 @@ pub enum TokenKind {
     Question,
 
     Match,
-    FatArrow,   // =>
-    Underscore, // _
+    FatArrow,      // =>
+    Underscore,    // _
     AtVar(String), // @ident
 
     Newline,

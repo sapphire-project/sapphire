@@ -7,7 +7,9 @@ macro_rules! assert_function_returns {
     ($types:expr, $name:expr, $ty:ident) => {
         assert_eq!(
             $types.function_return_type($name),
-            Some(Some(sapphire::ast::TypeExpr::Named(stringify!($ty).to_string())))
+            Some(Some(sapphire::ast::TypeExpr::Named(
+                stringify!($ty).to_string()
+            )))
         );
     };
 }
@@ -17,7 +19,9 @@ macro_rules! assert_method_returns {
     ($types:expr, $class:expr, $method:expr, $ty:ident) => {
         assert_eq!(
             $types.method_return_type($class, $method),
-            Some(Some(sapphire::ast::TypeExpr::Named(stringify!($ty).to_string())))
+            Some(Some(sapphire::ast::TypeExpr::Named(
+                stringify!($ty).to_string()
+            )))
         );
     };
 }
@@ -27,7 +31,9 @@ macro_rules! assert_constant_type {
     ($types:expr, $class:expr, $constant:expr, $ty:ident) => {
         assert_eq!(
             $types.constant_type($class, $constant),
-            Some(Some(sapphire::ast::TypeExpr::Named(stringify!($ty).to_string())))
+            Some(Some(sapphire::ast::TypeExpr::Named(
+                stringify!($ty).to_string()
+            )))
         );
     };
 }
@@ -42,7 +48,10 @@ fn literal_union_param_rejects_wrong_literal() {
 
 #[test]
 fn union_duplicate_arm_type_error() {
-    assert_typecheck_error!("def f() -> Int | Int { 1 }\nf()", "duplicate type 'Int' in union");
+    assert_typecheck_error!(
+        "def f() -> Int | Int { 1 }\nf()",
+        "duplicate type 'Int' in union"
+    );
 }
 
 #[test]
@@ -81,9 +90,7 @@ fn parameterized_type_annotation_no_errors() {
 
 #[test]
 fn generic_type_var_compatible_with_itself() {
-    let types = check_types_ok(
-        "class Box[T] { attr value: T\ndef get() -> T { self.value } }",
-    );
+    let types = check_types_ok("class Box[T] { attr value: T\ndef get() -> T { self.value } }");
     assert_method_returns!(types, "Box", "get", T);
 }
 
@@ -174,9 +181,7 @@ fn infer_if_no_else_no_inference() {
 
 #[test]
 fn infer_if_mismatched_branches_no_inference() {
-    typecheck_ok(
-        "def mixed(x: Int) { if x > 0 { 1 } else { \"neg\" } }\nmixed(1)",
-    );
+    typecheck_ok("def mixed(x: Int) { if x > 0 { 1 } else { \"neg\" } }\nmixed(1)");
 }
 
 #[test]
@@ -625,9 +630,7 @@ fn infer_mutual_recursion_methods() {
 fn infer_self_recursive_with_base_case() {
     // Single self-recursive function — already worked before the
     // lenient pass but should still pass.
-    let types = check_types_ok(
-        "def fact(n: Int) { if n <= 1 { 1 } else { n * fact(n - 1) } }",
-    );
+    let types = check_types_ok("def fact(n: Int) { if n <= 1 { 1 } else { n * fact(n - 1) } }");
     assert_function_returns!(types, "fact", Int);
 }
 
@@ -681,9 +684,7 @@ fn class_constant_lexical_access_in_method_infers_type() {
 
 #[test]
 fn match_uniform_arms_infer_type() {
-    let types = check_types_ok(
-        "def f(x: Int) { match x { 1 => { \"one\" } _ => { \"other\" } } }",
-    );
+    let types = check_types_ok("def f(x: Int) { match x { 1 => { \"one\" } _ => { \"other\" } } }");
     assert_function_returns!(types, "f", String);
 }
 

@@ -5,9 +5,7 @@ use support::{eval, eval_err, parse_err_msg};
 
 #[test]
 fn abstract_class_new_is_error() {
-    let err = eval_err(
-        "abstract class Shape {\n  def area() -> Float\n}\nShape.new()",
-    );
+    let err = eval_err("abstract class Shape {\n  def area() -> Float\n}\nShape.new()");
     match err {
         VmError::TypeError { message, .. } => {
             assert!(message.contains("cannot instantiate abstract class Shape"));

@@ -335,7 +335,9 @@ fn format_expr(expr: &Expr) -> String {
         Expr::SelfExpr => "self".to_string(),
         Expr::IVar { name } => name.clone(),
         Expr::Range { from, to } => format!("{}..{}", format_expr(from), format_expr(to)),
-        Expr::Unary { op, right } => format!("{}{}", token_kind_to_str(&op.kind), format_expr(right)),
+        Expr::Unary { op, right } => {
+            format!("{}{}", token_kind_to_str(&op.kind), format_expr(right))
+        }
         _ => "...".to_string(),
     }
 }

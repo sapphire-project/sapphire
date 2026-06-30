@@ -82,8 +82,10 @@ d.breed"#;
 
 #[test]
 fn new_with_no_args_errors_when_attr_required() {
-    let err = eval_err(r#"class Foo { attr a }
-Foo.new"#);
+    let err = eval_err(
+        r#"class Foo { attr a }
+Foo.new"#,
+    );
     match err {
         VmError::TypeError { message, .. } => {
             assert!(message.contains("Foo.new"));
@@ -95,9 +97,11 @@ Foo.new"#);
 
 #[test]
 fn new_missing_one_of_two_required_attrs() {
-    let err = eval_err(r#"class Foo { attr a
+    let err = eval_err(
+        r#"class Foo { attr a
   attr b }
-Foo.new(a: 1)"#);
+Foo.new(a: 1)"#,
+    );
     match err {
         VmError::TypeError { message, .. } => {
             assert!(message.contains("Foo.new"));
@@ -109,9 +113,11 @@ Foo.new(a: 1)"#);
 
 #[test]
 fn new_missing_required_attr_when_optional_attr_provided() {
-    let err = eval_err(r#"class Foo { attr a
+    let err = eval_err(
+        r#"class Foo { attr a
   attr b = 10 }
-Foo.new(b: 20)"#);
+Foo.new(b: 20)"#,
+    );
     match err {
         VmError::TypeError { message, .. } => {
             assert!(message.contains("Foo.new"));
@@ -123,9 +129,11 @@ Foo.new(b: 20)"#);
 
 #[test]
 fn child_errors_when_inherited_required_attr_missing() {
-    let err = eval_err(r#"class Animal { attr name }
+    let err = eval_err(
+        r#"class Animal { attr name }
 class Dog < Animal {}
-Dog.new"#);
+Dog.new"#,
+    );
     match err {
         VmError::TypeError { message, .. } => {
             assert!(message.contains("Dog.new"));
@@ -139,8 +147,10 @@ Dog.new"#);
 
 #[test]
 fn positional_arg_to_new_is_error() {
-    let err = eval_err(r#"class Foo { attr a }
-Foo.new(42)"#);
+    let err = eval_err(
+        r#"class Foo { attr a }
+Foo.new(42)"#,
+    );
     match err {
         VmError::TypeError { message, .. } => {
             assert!(message.contains("Foo.new"));
@@ -152,8 +162,10 @@ Foo.new(42)"#);
 
 #[test]
 fn positional_arg_on_no_attr_class_is_error() {
-    let err = eval_err(r#"class Empty {}
-Empty.new(1)"#);
+    let err = eval_err(
+        r#"class Empty {}
+Empty.new(1)"#,
+    );
     match err {
         VmError::TypeError { message, .. } => {
             assert!(message.contains("Empty.new"));

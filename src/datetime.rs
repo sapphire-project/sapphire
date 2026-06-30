@@ -36,12 +36,18 @@ fn jiff_err(e: impl std::fmt::Display) -> VmError {
 }
 
 fn type_err(msg: impl Into<String>, line: u32) -> VmError {
-    VmError::TypeError { message: msg.into(), line }
+    VmError::TypeError {
+        message: msg.into(),
+        line,
+    }
 }
 
 fn wrong_args(class: &str, method: &str, expected: usize, got: usize, line: u32) -> VmError {
     type_err(
-        format!("{}.{} expects {} arg(s), got {}", class, method, expected, got),
+        format!(
+            "{}.{} expects {} arg(s), got {}",
+            class, method, expected, got
+        ),
         line,
     )
 }
@@ -71,7 +77,11 @@ fn flds(heap: &GcHeap<HeapObject>, r: GcRef) -> &HashMap<String, VmValue> {
 fn int_arg(args: &[VmValue], idx: usize, ctx: &str) -> Result<i64, VmError> {
     match args.get(idx) {
         Some(VmValue::Int(n)) => Ok(*n),
-        Some(_) => Err(raise(format!("{}: arg {} must be an integer", ctx, idx + 1))),
+        Some(_) => Err(raise(format!(
+            "{}: arg {} must be an integer",
+            ctx,
+            idx + 1
+        ))),
         None => Err(raise(format!("{}: missing arg {}", ctx, idx + 1))),
     }
 }
@@ -93,8 +103,12 @@ fn to_timestamp(heap: &GcHeap<HeapObject>, r: GcRef) -> Result<Timestamp, VmErro
 
 fn to_date(heap: &GcHeap<HeapObject>, r: GcRef) -> Result<civil::Date, VmError> {
     let f = flds(heap, r);
-    civil::Date::new(get_int(f, "_y") as i16, get_int(f, "_mo") as i8, get_int(f, "_d") as i8)
-        .map_err(jiff_err)
+    civil::Date::new(
+        get_int(f, "_y") as i16,
+        get_int(f, "_mo") as i8,
+        get_int(f, "_d") as i8,
+    )
+    .map_err(jiff_err)
 }
 
 fn to_time(heap: &GcHeap<HeapObject>, r: GcRef) -> Result<civil::Time, VmError> {
@@ -143,9 +157,9 @@ fn to_span(heap: &GcHeap<HeapObject>, r: GcRef) -> Result<Span, VmError> {
 
 fn span_from_val(heap: &GcHeap<HeapObject>, val: &VmValue) -> Result<Span, VmError> {
     match val {
-        VmValue::Instance { class_name, fields, .. } if class_name == "Duration" => {
-            to_span(heap, *fields)
-        }
+        VmValue::Instance {
+            class_name, fields, ..
+        } if class_name == "Duration" => to_span(heap, *fields),
         _ => Err(raise("expected a Duration instance")),
     }
 }
@@ -213,30 +227,53 @@ fn from_span(s: Span) -> HashMap<String, VmValue> {
 // ── Instance constructors ─────────────────────────────────────────────────────
 
 fn mk_instant(ts: Timestamp) -> DtValue {
-    DtValue::NewInstance { class_name: "Instant".into(), fields: from_timestamp(ts) }
+    DtValue::NewInstance {
+        class_name: "Instant".into(),
+        fields: from_timestamp(ts),
+    }
 }
 fn mk_date(d: civil::Date) -> DtValue {
-    DtValue::NewInstance { class_name: "Date".into(), fields: from_date(d) }
+    DtValue::NewInstance {
+        class_name: "Date".into(),
+        fields: from_date(d),
+    }
 }
 fn mk_time(t: civil::Time) -> DtValue {
-    DtValue::NewInstance { class_name: "Time".into(), fields: from_time(t) }
+    DtValue::NewInstance {
+        class_name: "Time".into(),
+        fields: from_time(t),
+    }
 }
 fn mk_datetime(dt: civil::DateTime) -> DtValue {
-    DtValue::NewInstance { class_name: "DateTime".into(), fields: from_datetime(dt) }
+    DtValue::NewInstance {
+        class_name: "DateTime".into(),
+        fields: from_datetime(dt),
+    }
 }
 fn mk_zoned(z: &Zoned) -> DtValue {
-    DtValue::NewInstance { class_name: "ZonedDateTime".into(), fields: from_zoned(z) }
+    DtValue::NewInstance {
+        class_name: "ZonedDateTime".into(),
+        fields: from_zoned(z),
+    }
 }
 fn mk_duration(s: Span) -> DtValue {
-    DtValue::NewInstance { class_name: "Duration".into(), fields: from_span(s) }
+    DtValue::NewInstance {
+        class_name: "Duration".into(),
+        fields: from_span(s),
+    }
 }
 
 // ── Build Span from DateTime components ───────────────────────────────────────
 
 fn span_from_components(y: i64, mo: i64, d: i64, h: i64, mi: i64, s: i64, ns: i64) -> Span {
     Span::new()
-        .years(y).months(mo).days(d)
-        .hours(h).minutes(mi).seconds(s).nanoseconds(ns)
+        .years(y)
+        .months(mo)
+        .days(d)
+        .hours(h)
+        .minutes(mi)
+        .seconds(s)
+        .nanoseconds(ns)
 }
 
 /// Normalize a time-only span (no calendar units) from a timestamp difference
@@ -249,7 +286,11 @@ fn normalize_time_span(span: Span) -> Span {
     let total_m = total_s / 60;
     let mins = total_m % 60;
     let hours = total_m / 60;
-    Span::new().hours(hours).minutes(mins).seconds(secs).nanoseconds(ns)
+    Span::new()
+        .hours(hours)
+        .minutes(mins)
+        .seconds(secs)
+        .nanoseconds(ns)
 }
 
 // ── Public entry points ───────────────────────────────────────────────────────
@@ -269,7 +310,10 @@ pub fn dispatch_class_method(
         "ZonedDateTime" => zoned_class(heap, method_name, args, line),
         "Duration" => duration_class(method_name, args, line),
         _ => Err(type_err(
-            format!("{} has no native class method '{}'", class_name, method_name),
+            format!(
+                "{} has no native class method '{}'",
+                class_name, method_name
+            ),
             line,
         )),
     }
@@ -316,17 +360,31 @@ fn instant_class(
         }
         "of_epoch_seconds" => {
             if args.len() != 1 {
-                return Err(wrong_args("Instant", "of_epoch_seconds", 1, args.len(), line));
+                return Err(wrong_args(
+                    "Instant",
+                    "of_epoch_seconds",
+                    1,
+                    args.len(),
+                    line,
+                ));
             }
             let s = int_arg(args, 0, "Instant.of_epoch_seconds")?;
             Ok(mk_instant(Timestamp::from_second(s).map_err(jiff_err)?))
         }
         "of_epoch_millis" => {
             if args.len() != 1 {
-                return Err(wrong_args("Instant", "of_epoch_millis", 1, args.len(), line));
+                return Err(wrong_args(
+                    "Instant",
+                    "of_epoch_millis",
+                    1,
+                    args.len(),
+                    line,
+                ));
             }
             let ms = int_arg(args, 0, "Instant.of_epoch_millis")?;
-            Ok(mk_instant(Timestamp::from_millisecond(ms).map_err(jiff_err)?))
+            Ok(mk_instant(
+                Timestamp::from_millisecond(ms).map_err(jiff_err)?,
+            ))
         }
         "parse" => {
             if args.len() != 1 {
@@ -335,7 +393,10 @@ fn instant_class(
             let s = str_arg(args, 0, "Instant.parse")?;
             Ok(mk_instant(s.parse::<Timestamp>().map_err(jiff_err)?))
         }
-        _ => Err(type_err(format!("Instant has no class method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("Instant has no class method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -363,16 +424,26 @@ fn instant_instance(
                 return Err(wrong_args("Instant", "sub", 1, args.len(), line));
             }
             match &args[0] {
-                VmValue::Instance { class_name, fields: of, .. } if class_name == "Instant" => {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "Instant" => {
                     let other = to_timestamp(heap, *of)?;
                     let raw = ts()?.since(other).map_err(jiff_err)?;
                     Ok(mk_duration(normalize_time_span(raw)))
                 }
-                VmValue::Instance { class_name, fields: of, .. } if class_name == "Duration" => {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "Duration" => {
                     let span = to_span(heap, *of)?;
                     Ok(mk_instant(ts()?.checked_sub(span).map_err(jiff_err)?))
                 }
-                _ => Err(raise("Instant.sub: argument must be an Instant or Duration")),
+                _ => Err(raise(
+                    "Instant.sub: argument must be an Instant or Duration",
+                )),
             }
         }
         "before?" => {
@@ -411,7 +482,10 @@ fn instant_instance(
             let tz = TimeZone::get(tz_name).map_err(jiff_err)?;
             Ok(mk_zoned(&ts()?.to_zoned(tz)))
         }
-        _ => Err(type_err(format!("Instant has no method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("Instant has no method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -421,9 +495,9 @@ fn instant_from_arg(
     ctx: &str,
 ) -> Result<Timestamp, VmError> {
     match val {
-        VmValue::Instance { class_name, fields, .. } if class_name == "Instant" => {
-            to_timestamp(heap, *fields)
-        }
+        VmValue::Instance {
+            class_name, fields, ..
+        } if class_name == "Instant" => to_timestamp(heap, *fields),
         _ => Err(raise(format!("{}: argument must be an Instant", ctx))),
     }
 }
@@ -456,7 +530,10 @@ fn date_class(method: &str, args: &[VmValue], line: u32) -> Result<DtValue, VmEr
             let s = str_arg(args, 0, "Date.parse")?;
             Ok(mk_date(s.parse::<civil::Date>().map_err(jiff_err)?))
         }
-        _ => Err(type_err(format!("Date has no class method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("Date has no class method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -491,11 +568,19 @@ fn date_instance(
                 return Err(wrong_args("Date", "sub", 1, args.len(), line));
             }
             match &args[0] {
-                VmValue::Instance { class_name, fields: of, .. } if class_name == "Date" => {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "Date" => {
                     let other = to_date(heap, *of)?;
                     Ok(mk_duration(date()?.since(other).map_err(jiff_err)?))
                 }
-                VmValue::Instance { class_name, fields: of, .. } if class_name == "Duration" => {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "Duration" => {
                     let span = to_span(heap, *of)?;
                     Ok(mk_date(date()?.checked_sub(span).map_err(jiff_err)?))
                 }
@@ -530,8 +615,12 @@ fn date_instance(
             let pat = str_arg(args, 0, "Date.format")?;
             Ok(VmValue::Str(date()?.strftime(pat).to_string()).into())
         }
-        "next_day" => Ok(mk_date(date()?.checked_add(Span::new().days(1)).map_err(jiff_err)?)),
-        "prev_day" => Ok(mk_date(date()?.checked_sub(Span::new().days(1)).map_err(jiff_err)?)),
+        "next_day" => Ok(mk_date(
+            date()?.checked_add(Span::new().days(1)).map_err(jiff_err)?,
+        )),
+        "prev_day" => Ok(mk_date(
+            date()?.checked_sub(Span::new().days(1)).map_err(jiff_err)?,
+        )),
         _ => Err(type_err(format!("Date has no method '{}'", method), line)),
     }
 }
@@ -542,9 +631,9 @@ fn date_from_arg(
     ctx: &str,
 ) -> Result<civil::Date, VmError> {
     match val {
-        VmValue::Instance { class_name, fields, .. } if class_name == "Date" => {
-            to_date(heap, *fields)
-        }
+        VmValue::Instance {
+            class_name, fields, ..
+        } if class_name == "Date" => to_date(heap, *fields),
         _ => Err(raise(format!("{}: argument must be a Date", ctx))),
     }
 }
@@ -587,7 +676,10 @@ fn time_class(method: &str, args: &[VmValue], line: u32) -> Result<DtValue, VmEr
             let s = str_arg(args, 0, "Time.parse")?;
             Ok(mk_time(s.parse::<civil::Time>().map_err(jiff_err)?))
         }
-        _ => Err(type_err(format!("Time has no class method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("Time has no class method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -644,9 +736,9 @@ fn time_from_arg(
     ctx: &str,
 ) -> Result<civil::Time, VmError> {
     match val {
-        VmValue::Instance { class_name, fields, .. } if class_name == "Time" => {
-            to_time(heap, *fields)
-        }
+        VmValue::Instance {
+            class_name, fields, ..
+        } if class_name == "Time" => to_time(heap, *fields),
         _ => Err(raise(format!("{}: argument must be a Time", ctx))),
     }
 }
@@ -702,7 +794,10 @@ fn datetime_class(method: &str, args: &[VmValue], line: u32) -> Result<DtValue, 
             let s = str_arg(args, 0, "DateTime.parse")?;
             Ok(mk_datetime(s.parse::<civil::DateTime>().map_err(jiff_err)?))
         }
-        _ => Err(type_err(format!("DateTime has no class method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("DateTime has no class method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -738,15 +833,25 @@ fn datetime_instance(
                 return Err(wrong_args("DateTime", "sub", 1, args.len(), line));
             }
             match &args[0] {
-                VmValue::Instance { class_name, fields: of, .. } if class_name == "DateTime" => {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "DateTime" => {
                     let other = to_datetime(heap, *of)?;
                     Ok(mk_duration(dt()?.since(other).map_err(jiff_err)?))
                 }
-                VmValue::Instance { class_name, fields: of, .. } if class_name == "Duration" => {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "Duration" => {
                     let span = to_span(heap, *of)?;
                     Ok(mk_datetime(dt()?.checked_sub(span).map_err(jiff_err)?))
                 }
-                _ => Err(raise("DateTime.sub: argument must be a DateTime or Duration")),
+                _ => Err(raise(
+                    "DateTime.sub: argument must be a DateTime or Duration",
+                )),
             }
         }
         "before?" => {
@@ -789,10 +894,16 @@ fn datetime_instance(
             }
             let tz_name = str_arg(args, 0, "DateTime.in_timezone")?;
             let tz = TimeZone::get(tz_name).map_err(jiff_err)?;
-            let zoned = tz.to_ambiguous_zoned(dt()?).compatible().map_err(jiff_err)?;
+            let zoned = tz
+                .to_ambiguous_zoned(dt()?)
+                .compatible()
+                .map_err(jiff_err)?;
             Ok(mk_zoned(&zoned))
         }
-        _ => Err(type_err(format!("DateTime has no method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("DateTime has no method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -802,9 +913,9 @@ fn datetime_from_arg(
     ctx: &str,
 ) -> Result<civil::DateTime, VmError> {
     match val {
-        VmValue::Instance { class_name, fields, .. } if class_name == "DateTime" => {
-            to_datetime(heap, *fields)
-        }
+        VmValue::Instance {
+            class_name, fields, ..
+        } if class_name == "DateTime" => to_datetime(heap, *fields),
         _ => Err(raise(format!("{}: argument must be a DateTime", ctx))),
     }
 }
@@ -858,7 +969,13 @@ fn zoned_class(
         "of_compatible" => {
             // For unambiguous times or when you want compatible resolution.
             if args.len() != 7 {
-                return Err(wrong_args("ZonedDateTime", "of_compatible", 7, args.len(), line));
+                return Err(wrong_args(
+                    "ZonedDateTime",
+                    "of_compatible",
+                    7,
+                    args.len(),
+                    line,
+                ));
             }
             let tz_name = str_arg(args, 6, "ZonedDateTime.of_compatible")?;
             let tz = TimeZone::get(tz_name).map_err(jiff_err)?;
@@ -869,7 +986,13 @@ fn zoned_class(
         "of_before" => {
             // Fold → first occurrence (before the clock falls back). Gap → error.
             if args.len() != 7 {
-                return Err(wrong_args("ZonedDateTime", "of_before", 7, args.len(), line));
+                return Err(wrong_args(
+                    "ZonedDateTime",
+                    "of_before",
+                    7,
+                    args.len(),
+                    line,
+                ));
             }
             let tz_name = str_arg(args, 6, "ZonedDateTime.of_before")?;
             let tz = TimeZone::get(tz_name).map_err(jiff_err)?;
@@ -890,13 +1013,23 @@ fn zoned_class(
         }
         "from_instant" => {
             if args.len() != 2 {
-                return Err(wrong_args("ZonedDateTime", "from_instant", 2, args.len(), line));
+                return Err(wrong_args(
+                    "ZonedDateTime",
+                    "from_instant",
+                    2,
+                    args.len(),
+                    line,
+                ));
             }
             let ts = match &args[0] {
-                VmValue::Instance { class_name, fields, .. } if class_name == "Instant" => {
-                    to_timestamp(heap, *fields)?
+                VmValue::Instance {
+                    class_name, fields, ..
+                } if class_name == "Instant" => to_timestamp(heap, *fields)?,
+                _ => {
+                    return Err(raise(
+                        "ZonedDateTime.from_instant: first arg must be Instant",
+                    ));
                 }
-                _ => return Err(raise("ZonedDateTime.from_instant: first arg must be Instant")),
             };
             let tz_name = str_arg(args, 1, "ZonedDateTime.from_instant")?;
             let tz = TimeZone::get(tz_name).map_err(jiff_err)?;
@@ -909,7 +1042,10 @@ fn zoned_class(
             let s = str_arg(args, 0, "ZonedDateTime.parse")?;
             Ok(mk_zoned(&s.parse::<Zoned>().map_err(jiff_err)?))
         }
-        _ => Err(type_err(format!("ZonedDateTime has no class method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("ZonedDateTime has no class method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -945,7 +1081,13 @@ fn zoned_instance(
         }
         "with_timezone" => {
             if args.len() != 1 {
-                return Err(wrong_args("ZonedDateTime", "with_timezone", 1, args.len(), line));
+                return Err(wrong_args(
+                    "ZonedDateTime",
+                    "with_timezone",
+                    1,
+                    args.len(),
+                    line,
+                ));
             }
             let tz_name = str_arg(args, 0, "ZonedDateTime.with_timezone")?;
             let tz = TimeZone::get(tz_name).map_err(jiff_err)?;
@@ -965,17 +1107,25 @@ fn zoned_instance(
             }
             let z = zdt()?;
             match &args[0] {
-                VmValue::Instance { class_name, fields: of, .. }
-                    if class_name == "ZonedDateTime" =>
-                {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "ZonedDateTime" => {
                     let other = to_zoned(heap, *of)?;
                     Ok(mk_duration(z.since(&other).map_err(jiff_err)?))
                 }
-                VmValue::Instance { class_name, fields: of, .. } if class_name == "Duration" => {
+                VmValue::Instance {
+                    class_name,
+                    fields: of,
+                    ..
+                } if class_name == "Duration" => {
                     let span = to_span(heap, *of)?;
                     Ok(mk_zoned(&z.checked_sub(span).map_err(jiff_err)?))
                 }
-                _ => Err(raise("ZonedDateTime.sub: argument must be ZonedDateTime or Duration")),
+                _ => Err(raise(
+                    "ZonedDateTime.sub: argument must be ZonedDateTime or Duration",
+                )),
             }
         }
         "before?" => {
@@ -1006,19 +1156,18 @@ fn zoned_instance(
             let pat = str_arg(args, 0, "ZonedDateTime.format")?;
             Ok(VmValue::Str(zdt()?.strftime(pat).to_string()).into())
         }
-        _ => Err(type_err(format!("ZonedDateTime has no method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("ZonedDateTime has no method '{}'", method),
+            line,
+        )),
     }
 }
 
-fn zoned_from_arg(
-    heap: &GcHeap<HeapObject>,
-    val: &VmValue,
-    ctx: &str,
-) -> Result<Zoned, VmError> {
+fn zoned_from_arg(heap: &GcHeap<HeapObject>, val: &VmValue, ctx: &str) -> Result<Zoned, VmError> {
     match val {
-        VmValue::Instance { class_name, fields, .. } if class_name == "ZonedDateTime" => {
-            to_zoned(heap, *fields)
-        }
+        VmValue::Instance {
+            class_name, fields, ..
+        } if class_name == "ZonedDateTime" => to_zoned(heap, *fields),
         _ => Err(raise(format!("{}: argument must be a ZonedDateTime", ctx))),
     }
 }
@@ -1033,43 +1182,71 @@ fn duration_class(method: &str, args: &[VmValue], line: u32) -> Result<DtValue, 
             if args.len() != 1 {
                 return Err(wrong_args("Duration", "of_years", 1, args.len(), line));
             }
-            Ok(mk_duration(Span::new().years(int_arg(args, 0, "Duration.of_years")?)))
+            Ok(mk_duration(Span::new().years(int_arg(
+                args,
+                0,
+                "Duration.of_years",
+            )?)))
         }
         "of_months" => {
             if args.len() != 1 {
                 return Err(wrong_args("Duration", "of_months", 1, args.len(), line));
             }
-            Ok(mk_duration(Span::new().months(int_arg(args, 0, "Duration.of_months")?)))
+            Ok(mk_duration(Span::new().months(int_arg(
+                args,
+                0,
+                "Duration.of_months",
+            )?)))
         }
         "of_days" => {
             if args.len() != 1 {
                 return Err(wrong_args("Duration", "of_days", 1, args.len(), line));
             }
-            Ok(mk_duration(Span::new().days(int_arg(args, 0, "Duration.of_days")?)))
+            Ok(mk_duration(Span::new().days(int_arg(
+                args,
+                0,
+                "Duration.of_days",
+            )?)))
         }
         "of_hours" => {
             if args.len() != 1 {
                 return Err(wrong_args("Duration", "of_hours", 1, args.len(), line));
             }
-            Ok(mk_duration(Span::new().hours(int_arg(args, 0, "Duration.of_hours")?)))
+            Ok(mk_duration(Span::new().hours(int_arg(
+                args,
+                0,
+                "Duration.of_hours",
+            )?)))
         }
         "of_minutes" => {
             if args.len() != 1 {
                 return Err(wrong_args("Duration", "of_minutes", 1, args.len(), line));
             }
-            Ok(mk_duration(Span::new().minutes(int_arg(args, 0, "Duration.of_minutes")?)))
+            Ok(mk_duration(Span::new().minutes(int_arg(
+                args,
+                0,
+                "Duration.of_minutes",
+            )?)))
         }
         "of_seconds" => {
             if args.len() != 1 {
                 return Err(wrong_args("Duration", "of_seconds", 1, args.len(), line));
             }
-            Ok(mk_duration(Span::new().seconds(int_arg(args, 0, "Duration.of_seconds")?)))
+            Ok(mk_duration(Span::new().seconds(int_arg(
+                args,
+                0,
+                "Duration.of_seconds",
+            )?)))
         }
         "of_nanos" => {
             if args.len() != 1 {
                 return Err(wrong_args("Duration", "of_nanos", 1, args.len(), line));
             }
-            Ok(mk_duration(Span::new().nanoseconds(int_arg(args, 0, "Duration.of_nanos")?)))
+            Ok(mk_duration(Span::new().nanoseconds(int_arg(
+                args,
+                0,
+                "Duration.of_nanos",
+            )?)))
         }
         "of" => {
             if args.len() != 7 {
@@ -1085,7 +1262,10 @@ fn duration_class(method: &str, args: &[VmValue], line: u32) -> Result<DtValue, 
                 int_arg(args, 6, "Duration.of")?,
             )))
         }
-        _ => Err(type_err(format!("Duration has no class method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("Duration has no class method '{}'", method),
+            line,
+        )),
     }
 }
 
@@ -1136,6 +1316,9 @@ fn duration_instance(
                 .nanoseconds(a.get_nanoseconds() + other.get_nanoseconds());
             Ok(mk_duration(combined))
         }
-        _ => Err(type_err(format!("Duration has no method '{}'", method), line)),
+        _ => Err(type_err(
+            format!("Duration has no method '{}'", method),
+            line,
+        )),
     }
 }

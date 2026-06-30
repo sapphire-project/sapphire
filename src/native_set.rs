@@ -1,7 +1,7 @@
 use crate::gc::{GcHeap, GcRef};
 use crate::vm::{
-    define_native_class_method, define_native_method, format_value_with_heap, HeapObject, NativeArity,
-    VmError, VmValue,
+    HeapObject, NativeArity, VmError, VmValue, define_native_class_method, define_native_method,
+    format_value_with_heap,
 };
 
 fn set_r(recv: &VmValue) -> GcRef {
@@ -51,7 +51,10 @@ pub fn set_difference(
         VmValue::Set(other_r) => {
             let self_items = heap.get_set(r).clone();
             let other = heap.get_set(*other_r).clone();
-            let result = self_items.into_iter().filter(|x| !other.contains(x)).collect();
+            let result = self_items
+                .into_iter()
+                .filter(|x| !other.contains(x))
+                .collect();
             Ok(VmValue::Set(heap.alloc(HeapObject::Set(result))))
         }
         _ => Err(VmError::TypeError {
@@ -71,7 +74,9 @@ pub fn set_disjoint(
     match &args[0] {
         VmValue::Set(other_r) => {
             let other = heap.get_set(*other_r).clone();
-            Ok(VmValue::Bool(!heap.get_set(r).iter().any(|x| other.contains(x))))
+            Ok(VmValue::Bool(
+                !heap.get_set(r).iter().any(|x| other.contains(x)),
+            ))
         }
         _ => Err(VmError::TypeError {
             message: "disjoint? expects a Set".into(),
@@ -111,7 +116,10 @@ pub fn set_intersection(
         VmValue::Set(other_r) => {
             let self_items = heap.get_set(r).clone();
             let other = heap.get_set(*other_r).clone();
-            let result = self_items.into_iter().filter(|x| other.contains(x)).collect();
+            let result = self_items
+                .into_iter()
+                .filter(|x| other.contains(x))
+                .collect();
             Ok(VmValue::Set(heap.alloc(HeapObject::Set(result))))
         }
         _ => Err(VmError::TypeError {
@@ -141,7 +149,9 @@ pub fn set_subset(
     match &args[0] {
         VmValue::Set(other_r) => {
             let other = heap.get_set(*other_r).clone();
-            Ok(VmValue::Bool(heap.get_set(r).iter().all(|x| other.contains(x))))
+            Ok(VmValue::Bool(
+                heap.get_set(r).iter().all(|x| other.contains(x)),
+            ))
         }
         _ => Err(VmError::TypeError {
             message: "subset? expects a Set".into(),
@@ -245,7 +255,13 @@ fn set_class_new(
 
 /// Register native Set class methods on the bootstrapped Set `ClassObject`.
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
-    define_native_class_method(heap, class_ref, "new", NativeArity { min: 0, max: 1 }, set_class_new);
+    define_native_class_method(
+        heap,
+        class_ref,
+        "new",
+        NativeArity { min: 0, max: 1 },
+        set_class_new,
+    );
 }
 
 /// Register native Set instance methods on the bootstrapped Set `ClassObject`.

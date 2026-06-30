@@ -11,7 +11,8 @@ fn optional_param_uses_default() {
 
 #[test]
 fn optional_param_overridden_by_caller() {
-    let src = "def greet(name, prefix = \"Hello\") { prefix + \", \" + name }\ngreet(\"World\", \"Hi\")";
+    let src =
+        "def greet(name, prefix = \"Hello\") { prefix + \", \" + name }\ngreet(\"World\", \"Hi\")";
     assert_eq!(eval(src), VmValue::Str("Hi, World".into()));
 }
 

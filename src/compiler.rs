@@ -1,4 +1,6 @@
-use crate::ast::{Block, Expr, MatchArm, MethodDef, ParamDef, Pattern, RescueClause, StringPart, TypeExpr};
+use crate::ast::{
+    Block, Expr, MatchArm, MethodDef, ParamDef, Pattern, RescueClause, StringPart, TypeExpr,
+};
 use crate::chunk::{Chunk, Constant, Function, OpCode, RuntimeType, UpvalueDef};
 use crate::token::TokenKind;
 use crate::value::Value;
@@ -58,7 +60,11 @@ fn suggest_name<'a>(name: &str, candidates: &[&'a str]) -> Option<&'a str> {
 
 /// Returns (required_arity, param_defaults) for a parameter list, or a CompileError if
 /// defaults are invalid (non-literal, or required param follows optional).
-fn param_defaults(params: &[ParamDef], line: u32, col: u32) -> Result<(usize, Vec<Option<Value>>), CompileError> {
+fn param_defaults(
+    params: &[ParamDef],
+    line: u32,
+    col: u32,
+) -> Result<(usize, Vec<Option<Value>>), CompileError> {
     let mut required_arity = 0;
     let mut defaults: Vec<Option<Value>> = Vec::with_capacity(params.len());
     let mut seen_optional = false;
@@ -67,7 +73,10 @@ fn param_defaults(params: &[ParamDef], line: u32, col: u32) -> Result<(usize, Ve
             None => {
                 if seen_optional {
                     return Err(CompileError {
-                        message: format!("required parameter '{}' cannot follow optional parameter", p.name),
+                        message: format!(
+                            "required parameter '{}' cannot follow optional parameter",
+                            p.name
+                        ),
                         line,
                         column: col,
                     });
@@ -79,11 +88,16 @@ fn param_defaults(params: &[ParamDef], line: u32, col: u32) -> Result<(usize, Ve
                 seen_optional = true;
                 let val = match expr {
                     Expr::Literal(v) => v.clone(),
-                    _ => return Err(CompileError {
-                        message: format!("default value for '{}' must be a literal (int, float, string, bool, or nil)", p.name),
-                        line,
-                        column: col,
-                    }),
+                    _ => {
+                        return Err(CompileError {
+                            message: format!(
+                                "default value for '{}' must be a literal (int, float, string, bool, or nil)",
+                                p.name
+                            ),
+                            line,
+                            column: col,
+                        });
+                    }
                 };
                 defaults.push(Some(val));
             }
@@ -962,7 +976,6 @@ impl Compiler {
                 Ok(())
             }
 
-
             Expr::Class {
                 name,
                 type_params,
@@ -1564,7 +1577,7 @@ impl Compiler {
                 self.emit(OpCode::GetLocal(elem_pos)); // [elem, elem_copy]
                 self.literal(low)?; // [elem, elem_copy, low]
                 self.emit(OpCode::GreaterEqual); // [elem, bool1] — copy consumed
-                                                 // JumpIfFalse pops bool1 on both branches, leaving [elem] either way.
+                // JumpIfFalse pops bool1 on both branches, leaving [elem] either way.
                 let first_fail = self.emit_jump(OpCode::JumpIfFalse(0));
                 // True path: [elem]  →  check elem <= high
                 self.literal(high)?; // [elem, high]

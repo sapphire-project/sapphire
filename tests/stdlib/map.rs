@@ -35,4 +35,3 @@ c = a.merge(b)
 c["x"]"#;
     assert_eq!(eval(src2), VmValue::Int(1));
 }
-

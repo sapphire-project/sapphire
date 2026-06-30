@@ -1,5 +1,5 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_method};
 
 fn float_n(recv: &VmValue) -> f64 {
     match recv {

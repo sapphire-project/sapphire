@@ -9,13 +9,19 @@ fn constants() {
 #[test]
 fn sin() {
     assert_eq!(eval("Math.sin(0)"), VmValue::Float(0.0_f64.sin()));
-    assert_eq!(eval("Math.sin(Math.PI)"), VmValue::Float(std::f64::consts::PI.sin()));
+    assert_eq!(
+        eval("Math.sin(Math.PI)"),
+        VmValue::Float(std::f64::consts::PI.sin())
+    );
 }
 
 #[test]
 fn cos() {
     assert_eq!(eval("Math.cos(0)"), VmValue::Float(0.0_f64.cos()));
-    assert_eq!(eval("Math.cos(Math.PI)"), VmValue::Float(std::f64::consts::PI.cos()));
+    assert_eq!(
+        eval("Math.cos(Math.PI)"),
+        VmValue::Float(std::f64::consts::PI.cos())
+    );
 }
 
 #[test]
