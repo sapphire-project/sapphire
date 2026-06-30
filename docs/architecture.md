@@ -31,12 +31,15 @@ Each row is `src/<module>.rs` (except `lexer` / `token`, two files).
 | `compiler` | AST → opcodes (e.g. `Foo.new` → `OpCode::NewInstance`) |
 | `chunk` | `OpCode`, constant pool, `Function`, upvalue metadata |
 | `value` | Chunk constants (`Value`) — primitives only at compile time |
-| `vm` | Operand stack, dispatch, `VmValue`, imports, class registry, I/O hooks |
+| `vm` | Main VM dispatch, state, and class registry (`mod.rs`); sub-modules below |
+| `vm/heap` | Heap object enum (`HeapObject`) and debug formatting |
+| `vm/value` | VM-internal value types: `NativeArity`, `SapphireMethod`, `Upvalue`, `UpvalueState` |
+| `vm/error` | `VmError` (VM-level error) and `RescueInfo` (rescue handler bookkeeping) |
 | `gc` | Mark-and-sweep heap (`GcHeap`, `GcRef`, `Trace`) |
 | `native` | Shared helpers (`primitive_class_name`, comparisons) and native dispatch |
 | `native_*` | Per-type builtins (`native_int`, `native_list`, `native_string`, …) |
 | `datetime` | Date/time via **jiff**, wired into VM values / heap as needed |
-| `error` | Parse, compile, and VM error types |
+| `error` | Top-level `SapphireError` (parse, typecheck, runtime errors) |
 
 ## Execution pipeline
 
@@ -87,7 +90,7 @@ flowchart LR
 
 ## Runtime model
 
-- **`VmValue`** (`vm.rs`): runtime tags for primitives, collections, ranges, closures, classes, instances, bound methods, native callables.
+- **`VmValue`** (`vm/mod.rs`): runtime tags for primitives, collections, ranges, closures, classes, instances, bound methods, native callables.
 - **Imports**: `./` / `../` relative to `current_dir`; `.spr` implied; canonical paths dedupe so each file loads once. REPL / empty base disables imports.
 - **Stdlib**: sources under `stdlib/src/` embedded as strings, evaluated in `load_stdlib()` (see `docs/adding-stdlib-class.md`).
 - **GC**: heap objects implement `Trace`; `Vm` supplies roots (see `docs/gc.md`).
