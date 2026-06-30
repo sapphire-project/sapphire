@@ -7,13 +7,14 @@ use crate::native::{
 use crate::value::Value;
 use heap::collect_refs;
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+mod error;
 mod heap;
 mod value;
 
+pub use error::{RescueInfo, VmError};
 pub use heap::{HeapObject, format_value_with_heap};
 pub use value::{NativeArity, SapphireMethod, Upvalue, UpvalueState};
 
@@ -252,58 +253,6 @@ impl From<&Constant> for VmValue {
             }
         }
     }
-}
-
-// ── Error ─────────────────────────────────────────────────────────────────────
-
-#[derive(Debug, PartialEq)]
-pub enum VmError {
-    StackUnderflow,
-    TypeError {
-        message: String,
-        line: u32,
-    },
-    /// `raise val` — propagates until caught by a `Begin` handler.
-    Raised(VmValue),
-    /// `break val` inside a block — unwinds to the enclosing call-with-block.
-    Break(VmValue),
-    /// `next val` inside a block — skips to the next `yield`.
-    #[allow(dead_code)]
-    Next(VmValue),
-    /// `return val` inside a block called by a native method — propagates to
-    /// the dispatch site so it can perform a non-local return from the
-    /// enclosing Sapphire frame.
-    Return(Option<VmValue>),
-}
-
-impl fmt::Display for VmError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            VmError::StackUnderflow => {
-                write!(
-                    f,
-                    "internal error: stack underflow (this is a Sapphire bug)"
-                )
-            }
-            VmError::TypeError { message, line } => {
-                write!(f, "[line {}] error: {}", line, message)
-            }
-            VmError::Raised(v) => write!(f, "uncaught raise: {}", v),
-            VmError::Break(v) => write!(f, "break outside block: {}", v),
-            VmError::Next(v) => write!(f, "next outside block: {}", v),
-            VmError::Return(v) => write!(f, "return outside method: {:?}", v),
-        }
-    }
-}
-
-// ── Call frame ────────────────────────────────────────────────────────────────
-
-/// Rescue handler registered by `BeginRescue`; popped by `PopRescue`.
-#[derive(Clone, Copy)]
-struct RescueInfo {
-    handler_ip: usize,
-    rescue_var_slot: usize, // usize::MAX means no variable
-    stack_height: usize,    // stack depth at BeginRescue time (for cleanup)
 }
 
 struct CallFrame {
