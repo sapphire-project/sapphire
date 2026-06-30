@@ -1,5 +1,5 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_method};
 
 pub fn nil_inspect(
     _heap: &mut GcHeap<HeapObject>,

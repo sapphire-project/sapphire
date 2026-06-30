@@ -1090,7 +1090,11 @@ impl Parser {
                             } else {
                                 None
                             };
-                            params.push(ParamDef { name: p, type_ann, default });
+                            params.push(ParamDef {
+                                name: p,
+                                type_ann,
+                                default,
+                            });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
@@ -1194,7 +1198,11 @@ impl Parser {
                             } else {
                                 None
                             };
-                            params.push(ParamDef { name: p, type_ann, default });
+                            params.push(ParamDef {
+                                name: p,
+                                type_ann,
+                                default,
+                            });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
@@ -1264,7 +1272,11 @@ impl Parser {
                             } else {
                                 None
                             };
-                            params.push(ParamDef { name: p, type_ann, default });
+                            params.push(ParamDef {
+                                name: p,
+                                type_ann,
+                                default,
+                            });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
@@ -1347,7 +1359,11 @@ impl Parser {
                             } else {
                                 None
                             };
-                            params.push(ParamDef { name: p, type_ann, default });
+                            params.push(ParamDef {
+                                name: p,
+                                type_ann,
+                                default,
+                            });
                         }
                         _ => {
                             return Err(SapphireError::ParseError {
@@ -2598,7 +2614,6 @@ mod tests {
         let tokens = Lexer::new("1+").scan_tokens();
         assert!(Parser::new(tokens).parse().is_err());
     }
-
 
     #[test]
     fn test_multiple_statements() {

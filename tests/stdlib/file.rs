@@ -1,4 +1,4 @@
-use super::{eval, VmValue};
+use super::{VmValue, eval};
 use std::path::{Path, PathBuf};
 
 fn temp_path(name: &str) -> PathBuf {

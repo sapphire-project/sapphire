@@ -1,5 +1,5 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_class_method};
 use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
@@ -16,8 +16,9 @@ fn env_all(
     _args: &[VmValue],
     _line: u32,
 ) -> Result<VmValue, VmError> {
-    let vars: std::collections::HashMap<String, VmValue> =
-        std::env::vars().map(|(k, v)| (k, VmValue::Str(v))).collect();
+    let vars: std::collections::HashMap<String, VmValue> = std::env::vars()
+        .map(|(k, v)| (k, VmValue::Str(v)))
+        .collect();
     Ok(VmValue::Map(heap.alloc(HeapObject::Map(vars))))
 }
 
@@ -51,9 +52,9 @@ fn env_fetch(
     line: u32,
 ) -> Result<VmValue, VmError> {
     match args {
-        [Str(var_name)] => std::env::var(var_name.as_str())
-            .map(Str)
-            .map_err(|_| VmError::Raised(Str(format!("environment variable not found: {var_name}")))),
+        [Str(var_name)] => std::env::var(var_name.as_str()).map(Str).map_err(|_| {
+            VmError::Raised(Str(format!("environment variable not found: {var_name}")))
+        }),
         [_] => Err(VmError::TypeError {
             message: "Env.fetch: name must be a string".to_string(),
             line,
@@ -72,9 +73,9 @@ fn env_get(
     line: u32,
 ) -> Result<VmValue, VmError> {
     match args {
-        [Str(var_name)] => {
-            Ok(std::env::var(var_name.as_str()).map(Str).unwrap_or(VmValue::Nil))
-        }
+        [Str(var_name)] => Ok(std::env::var(var_name.as_str())
+            .map(Str)
+            .unwrap_or(VmValue::Nil)),
         [_] => Err(VmError::TypeError {
             message: "Env.get: name must be a string".to_string(),
             line,

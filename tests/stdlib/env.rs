@@ -3,12 +3,18 @@ use super::{VmValue, eval, eval_err};
 #[test]
 fn get_set_round_trip() {
     unsafe { std::env::set_var("SPR_TEST_GET", "hello") };
-    assert_eq!(eval(r#"Env.get("SPR_TEST_GET")"#), VmValue::Str("hello".to_string()));
+    assert_eq!(
+        eval(r#"Env.get("SPR_TEST_GET")"#),
+        VmValue::Str("hello".to_string())
+    );
 }
 
 #[test]
 fn get_missing_returns_nil() {
-    assert_eq!(eval(r#"Env.get("SPR_DEFINITELY_NOT_SET_XYZ_123")"#), VmValue::Nil);
+    assert_eq!(
+        eval(r#"Env.get("SPR_DEFINITELY_NOT_SET_XYZ_123")"#),
+        VmValue::Nil
+    );
 }
 
 #[test]
@@ -20,10 +26,7 @@ fn fetch_raises_when_missing() {
 #[test]
 fn set_and_get() {
     eval(r#"Env.set("SPR_TEST_SET", "world")"#);
-    assert_eq!(
-        std::env::var("SPR_TEST_SET").unwrap(),
-        "world"
-    );
+    assert_eq!(std::env::var("SPR_TEST_SET").unwrap(), "world");
 }
 
 #[test]
@@ -36,5 +39,8 @@ fn delete() {
 #[test]
 fn all_returns_map() {
     unsafe { std::env::set_var("SPR_TEST_ALL", "yes") };
-    assert_eq!(eval(r#"Env.all().has_key?("SPR_TEST_ALL")"#), VmValue::Bool(true));
+    assert_eq!(
+        eval(r#"Env.all().has_key?("SPR_TEST_ALL")"#),
+        VmValue::Bool(true)
+    );
 }

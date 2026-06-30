@@ -5,7 +5,11 @@ use VmValue::Str;
 pub enum ProcessResult {
     Primitive(VmValue),
     List(Vec<VmValue>),
-    RunOutput { stdout: String, stderr: String, exit_code: i64 },
+    RunOutput {
+        stdout: String,
+        stderr: String,
+        exit_code: i64,
+    },
 }
 
 fn process_dispatch_error(name: &str, argc: usize, line: u32) -> VmError {
@@ -40,7 +44,9 @@ pub fn dispatch_process_class_method(
             line,
         }),
 
-        ("pid", []) => Ok(ProcessResult::Primitive(VmValue::Int(std::process::id() as i64))),
+        ("pid", []) => Ok(ProcessResult::Primitive(VmValue::Int(
+            std::process::id() as i64
+        ))),
 
         ("run", [Str(cmd)]) => {
             let output = std::process::Command::new("sh")

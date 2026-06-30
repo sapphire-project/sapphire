@@ -4,7 +4,9 @@
 mod support;
 
 use sapphire::vm::VmValue;
-pub use support::{eval_bool, eval_int, eval_str, eval_stdlib as eval, eval_stdlib_err as eval_err};
+pub use support::{
+    eval_bool, eval_int, eval_stdlib as eval, eval_stdlib_err as eval_err, eval_str,
+};
 
 #[path = "stdlib/int.rs"]
 mod int;

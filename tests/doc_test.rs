@@ -48,27 +48,41 @@ fn test_doc_generation() {
     assert_eq!(doc.interfaces[0].name, "Runnable");
     assert_eq!(doc.interfaces[0].methods.len(), 1);
     assert_eq!(doc.interfaces[0].methods[0].name, "run");
-    assert_eq!(doc.interfaces[0].methods[0].return_type.as_deref(), Some("Nil"));
+    assert_eq!(
+        doc.interfaces[0].methods[0].return_type.as_deref(),
+        Some("Nil")
+    );
 
     assert_eq!(doc.classes.len(), 1);
     assert_eq!(doc.classes[0].name, "Animal");
     assert_eq!(doc.classes[0].fields.len(), 2);
     assert_eq!(doc.classes[0].fields[0].name, "name");
     assert_eq!(doc.classes[0].fields[0].type_ann.as_deref(), Some("String"));
-    assert_eq!(doc.classes[0].fields[0].default.as_deref(), Some("\"unknown\""));
+    assert_eq!(
+        doc.classes[0].fields[0].default.as_deref(),
+        Some("\"unknown\"")
+    );
     assert_eq!(doc.classes[0].fields[1].name, "age");
     assert_eq!(doc.classes[0].fields[1].type_ann.as_deref(), Some("Int"));
     assert_eq!(doc.classes[0].fields[1].default, None);
 
     assert_eq!(doc.classes[0].methods.len(), 2);
-    let walk_method = doc.classes[0].methods.iter().find(|m| m.name == "walk").unwrap();
+    let walk_method = doc.classes[0]
+        .methods
+        .iter()
+        .find(|m| m.name == "walk")
+        .unwrap();
     assert_eq!(walk_method.params.len(), 1);
     assert_eq!(walk_method.params[0].name, "speed");
     assert_eq!(walk_method.params[0].type_ann.as_deref(), Some("Float"));
     assert_eq!(walk_method.params[0].default.as_deref(), Some("1.0"));
     assert_eq!(walk_method.return_type.as_deref(), Some("Nil"));
 
-    let create_method = doc.classes[0].methods.iter().find(|m| m.name == "create").unwrap();
+    let create_method = doc.classes[0]
+        .methods
+        .iter()
+        .find(|m| m.name == "create")
+        .unwrap();
     assert!(create_method.class_method);
     assert_eq!(create_method.params.len(), 1);
     assert_eq!(create_method.params[0].name, "name");

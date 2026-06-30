@@ -152,7 +152,9 @@ impl Trace for HeapObject {
 /// Push all GcRefs contained directly in `val` into `out`.
 fn collect_refs(val: &VmValue, out: &mut Vec<GcRef>) {
     match val {
-        VmValue::List(r) | VmValue::Map(r) | VmValue::Set(r) | VmValue::ClassObj(r, _) => out.push(*r),
+        VmValue::List(r) | VmValue::Map(r) | VmValue::Set(r) | VmValue::ClassObj(r, _) => {
+            out.push(*r)
+        }
         VmValue::Instance { fields, .. } => out.push(*fields),
         _ => {}
     }
@@ -1449,7 +1451,10 @@ impl Vm {
             ("stdlib/nil.spr", include_str!("../../stdlib/src/nil.spr")),
             ("stdlib/num.spr", include_str!("../../stdlib/src/num.spr")),
             ("stdlib/int.spr", include_str!("../../stdlib/src/int.spr")),
-            ("stdlib/float.spr", include_str!("../../stdlib/src/float.spr")),
+            (
+                "stdlib/float.spr",
+                include_str!("../../stdlib/src/float.spr"),
+            ),
             (
                 "stdlib/string.spr",
                 include_str!("../../stdlib/src/string.spr"),
@@ -1462,7 +1467,10 @@ impl Vm {
             ("stdlib/list.spr", include_str!("../../stdlib/src/list.spr")),
             ("stdlib/map.spr", include_str!("../../stdlib/src/map.spr")),
             ("stdlib/set.spr", include_str!("../../stdlib/src/set.spr")),
-            ("stdlib/regex.spr", include_str!("../../stdlib/src/regex.spr")),
+            (
+                "stdlib/regex.spr",
+                include_str!("../../stdlib/src/regex.spr"),
+            ),
             ("stdlib/test.spr", include_str!("../../stdlib/src/test.spr")),
             ("stdlib/file.spr", include_str!("../../stdlib/src/file.spr")),
             ("stdlib/dir.spr", include_str!("../../stdlib/src/dir.spr")),
@@ -1535,37 +1543,52 @@ impl Vm {
         // objects rather than old-style VmValue::Class entries.
         let cc = self.core_classes.clone();
         if let Some(r) = cc.object {
-            self.globals.insert("Object".into(), VmValue::ClassObj(r, "Object".into()));
+            self.globals
+                .insert("Object".into(), VmValue::ClassObj(r, "Object".into()));
         }
         if let Some(r) = cc.class_cls {
-            self.globals.insert("Class".into(), VmValue::ClassObj(r, "Class".into()));
+            self.globals
+                .insert("Class".into(), VmValue::ClassObj(r, "Class".into()));
         }
         if let Some(r) = cc.set_cls {
-            self.globals.insert("Set".into(), VmValue::ClassObj(r, "Set".into()));
+            self.globals
+                .insert("Set".into(), VmValue::ClassObj(r, "Set".into()));
         }
         if let Some(r) = cc.nil_cls {
-            self.globals.insert("Nil".into(), VmValue::ClassObj(r, "Nil".into()));
+            self.globals
+                .insert("Nil".into(), VmValue::ClassObj(r, "Nil".into()));
         }
         if let Some(r) = cc.int_cls {
-            self.globals.insert("Int".into(), VmValue::ClassObj(r, "Int".into()));
+            self.globals
+                .insert("Int".into(), VmValue::ClassObj(r, "Int".into()));
         }
         if let Some(r) = cc.float_cls {
-            self.globals.insert("Float".into(), VmValue::ClassObj(r, "Float".into()));
+            self.globals
+                .insert("Float".into(), VmValue::ClassObj(r, "Float".into()));
         }
         if let Some(r) = cc.string_cls {
-            self.globals.insert("String".into(), VmValue::ClassObj(r, "String".into()));
+            self.globals
+                .insert("String".into(), VmValue::ClassObj(r, "String".into()));
         }
         if let Some(r) = cc.range_cls {
-            self.globals.insert("Range".into(), VmValue::ClassObj(r, "Range".into()));
+            self.globals
+                .insert("Range".into(), VmValue::ClassObj(r, "Range".into()));
         }
         if let Some(r) = cc.list_cls {
-            self.globals.insert("List".into(), VmValue::ClassObj(r, "List".into()));
+            self.globals
+                .insert("List".into(), VmValue::ClassObj(r, "List".into()));
         }
         if let Some(r) = cc.map_cls {
-            self.globals.insert("Map".into(), VmValue::ClassObj(r, "Map".into()));
+            self.globals
+                .insert("Map".into(), VmValue::ClassObj(r, "Map".into()));
         }
         // Register `puts` as a standalone global so it can be called without an explicit receiver.
-        if let Some(method) = self.classes.get("Object").and_then(|e| e.methods.get("puts")).cloned() {
+        if let Some(method) = self
+            .classes
+            .get("Object")
+            .and_then(|e| e.methods.get("puts"))
+            .cloned()
+        {
             self.globals.insert(
                 "puts".to_string(),
                 VmValue::Closure {
@@ -2012,33 +2035,37 @@ impl Vm {
                         line,
                     )?;
                     // Merge inherited fields, instance methods, and class methods from superclass.
-                    let (merged_fields, merged_required, mut merged_methods, mut merged_class_methods) =
-                        if let Some(ref sname) = effective_super {
-                            let (parent_fields, parent_required, parent_methods, parent_class_methods) =
-                                match self.classes.get(sname) {
-                                    Some(entry) => (
-                                        entry.fields.clone(),
-                                        entry.required_fields.clone(),
-                                        (*entry.methods).clone(),
-                                        (*entry.class_methods).clone(),
-                                    ),
-                                    None => {
-                                        return Err(VmError::TypeError {
-                                            message: format!("superclass '{}' not found", sname),
-                                            line,
-                                        });
-                                    }
-                                };
-                            let mut mf = parent_fields;
-                            mf.extend(own_fields);
-                            let mut mr = parent_required;
-                            mr.extend(own_required);
-                            let mm = parent_methods;
-                            let mc = parent_class_methods;
-                            (mf, mr, mm, mc)
-                        } else {
-                            (own_fields, own_required, HashMap::new(), HashMap::new())
-                        };
+                    let (
+                        merged_fields,
+                        merged_required,
+                        mut merged_methods,
+                        mut merged_class_methods,
+                    ) = if let Some(ref sname) = effective_super {
+                        let (parent_fields, parent_required, parent_methods, parent_class_methods) =
+                            match self.classes.get(sname) {
+                                Some(entry) => (
+                                    entry.fields.clone(),
+                                    entry.required_fields.clone(),
+                                    (*entry.methods).clone(),
+                                    (*entry.class_methods).clone(),
+                                ),
+                                None => {
+                                    return Err(VmError::TypeError {
+                                        message: format!("superclass '{}' not found", sname),
+                                        line,
+                                    });
+                                }
+                            };
+                        let mut mf = parent_fields;
+                        mf.extend(own_fields);
+                        let mut mr = parent_required;
+                        mr.extend(own_required);
+                        let mm = parent_methods;
+                        let mc = parent_class_methods;
+                        (mf, mr, mm, mc)
+                    } else {
+                        (own_fields, own_required, HashMap::new(), HashMap::new())
+                    };
                     // Overlay included modules (classes only).
                     if !is_module {
                         let mut visiting = HashSet::new();
@@ -2315,10 +2342,7 @@ impl Vm {
                     for req in &required_fields {
                         if !provided.contains(req) {
                             return Err(VmError::TypeError {
-                                message: format!(
-                                    "{}.new requires attribute '{}'",
-                                    class_name, req
-                                ),
+                                message: format!("{}.new requires attribute '{}'", class_name, req),
                                 line,
                             });
                         }
@@ -2485,16 +2509,38 @@ impl Vm {
                         let recv = self.stack[recv_slot].clone();
                         // For bootstrapped types, return the heap-allocated ClassObj.
                         let bootstrapped = match &recv {
-                            VmValue::Float(_) => self.core_classes.float_cls.map(|r| VmValue::ClassObj(r, "Float".into())),
-                            VmValue::Int(_) => self.core_classes.int_cls.map(|r| VmValue::ClassObj(r, "Int".into())),
-                            VmValue::Nil => self.core_classes.nil_cls.map(|r| VmValue::ClassObj(r, "Nil".into())),
-                            VmValue::Set(_) => self.core_classes.set_cls.map(|r| VmValue::ClassObj(r, "Set".into())),
-                            VmValue::Str(_) => self.core_classes.string_cls.map(|r| VmValue::ClassObj(r, "String".into())),
-                            VmValue::Range { .. } => {
-                                self.core_classes.range_cls.map(|r| VmValue::ClassObj(r, "Range".into()))
-                            }
-                            VmValue::List(_) => self.core_classes.list_cls.map(|r| VmValue::ClassObj(r, "List".into())),
-                            VmValue::Map(_) => self.core_classes.map_cls.map(|r| VmValue::ClassObj(r, "Map".into())),
+                            VmValue::Float(_) => self
+                                .core_classes
+                                .float_cls
+                                .map(|r| VmValue::ClassObj(r, "Float".into())),
+                            VmValue::Int(_) => self
+                                .core_classes
+                                .int_cls
+                                .map(|r| VmValue::ClassObj(r, "Int".into())),
+                            VmValue::Nil => self
+                                .core_classes
+                                .nil_cls
+                                .map(|r| VmValue::ClassObj(r, "Nil".into())),
+                            VmValue::Set(_) => self
+                                .core_classes
+                                .set_cls
+                                .map(|r| VmValue::ClassObj(r, "Set".into())),
+                            VmValue::Str(_) => self
+                                .core_classes
+                                .string_cls
+                                .map(|r| VmValue::ClassObj(r, "String".into())),
+                            VmValue::Range { .. } => self
+                                .core_classes
+                                .range_cls
+                                .map(|r| VmValue::ClassObj(r, "Range".into())),
+                            VmValue::List(_) => self
+                                .core_classes
+                                .list_cls
+                                .map(|r| VmValue::ClassObj(r, "List".into())),
+                            VmValue::Map(_) => self
+                                .core_classes
+                                .map_cls
+                                .map(|r| VmValue::ClassObj(r, "Map".into())),
                             VmValue::ClassObj(r, _) => {
                                 let r = *r;
                                 if let HeapObject::ClassObject {
@@ -2640,12 +2686,18 @@ impl Vm {
                                     });
                                 }
                             }
-                            if arg_count < method.function.required_arity || arg_count > method.function.arity {
-                                let expected = if method.function.required_arity == method.function.arity {
-                                    format!("{}", method.function.arity)
-                                } else {
-                                    format!("{} to {}", method.function.required_arity, method.function.arity)
-                                };
+                            if arg_count < method.function.required_arity
+                                || arg_count > method.function.arity
+                            {
+                                let expected =
+                                    if method.function.required_arity == method.function.arity {
+                                        format!("{}", method.function.arity)
+                                    } else {
+                                        format!(
+                                            "{} to {}",
+                                            method.function.required_arity, method.function.arity
+                                        )
+                                    };
                                 return Err(VmError::TypeError {
                                     message: format!(
                                         "class method '{}' expects {} arg(s), got {}",
@@ -2657,7 +2709,8 @@ impl Vm {
                             self.push_param_defaults(&method.function, arg_count);
                             check_param_types(
                                 &method.function,
-                                &mut self.stack[recv_slot + 1..recv_slot + 1 + method.function.arity],
+                                &mut self.stack
+                                    [recv_slot + 1..recv_slot + 1 + method.function.arity],
                                 line,
                             )?;
                             self.frames.push(CallFrame {
@@ -2732,12 +2785,18 @@ impl Vm {
                                             });
                                         }
                                     }
-                                    if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                        let expected = if m.function.required_arity == m.function.arity {
-                                            format!("{}", m.function.arity)
-                                        } else {
-                                            format!("{} to {}", m.function.required_arity, m.function.arity)
-                                        };
+                                    if arg_count < m.function.required_arity
+                                        || arg_count > m.function.arity
+                                    {
+                                        let expected =
+                                            if m.function.required_arity == m.function.arity {
+                                                format!("{}", m.function.arity)
+                                            } else {
+                                                format!(
+                                                    "{} to {}",
+                                                    m.function.required_arity, m.function.arity
+                                                )
+                                            };
                                         return Err(VmError::TypeError {
                                             message: format!(
                                                 "class method '{}' expects {} arg(s), got {}",
@@ -2749,7 +2808,8 @@ impl Vm {
                                     self.push_param_defaults(&m.function, arg_count);
                                     check_param_types(
                                         &m.function,
-                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                        &mut self.stack
+                                            [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                         line,
                                     )?;
                                     self.frames.push(CallFrame {
@@ -2961,12 +3021,18 @@ impl Vm {
                                             });
                                         }
                                     }
-                                    if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                        let expected = if m.function.required_arity == m.function.arity {
-                                            format!("{}", m.function.arity)
-                                        } else {
-                                            format!("{} to {}", m.function.required_arity, m.function.arity)
-                                        };
+                                    if arg_count < m.function.required_arity
+                                        || arg_count > m.function.arity
+                                    {
+                                        let expected =
+                                            if m.function.required_arity == m.function.arity {
+                                                format!("{}", m.function.arity)
+                                            } else {
+                                                format!(
+                                                    "{} to {}",
+                                                    m.function.required_arity, m.function.arity
+                                                )
+                                            };
                                         return Err(VmError::TypeError {
                                             message: format!(
                                                 "method '{}' expects {} arg(s), got {}",
@@ -2978,7 +3044,8 @@ impl Vm {
                                     self.push_param_defaults(&m.function, arg_count);
                                     check_param_types(
                                         &m.function,
-                                        &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                        &mut self.stack
+                                            [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                         line,
                                     )?;
                                     let class_name = Some(m.defined_in.clone());
@@ -3019,11 +3086,17 @@ impl Vm {
                                         });
                                     }
                                 }
-                                if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                    let expected = if m.function.required_arity == m.function.arity {
+                                if arg_count < m.function.required_arity
+                                    || arg_count > m.function.arity
+                                {
+                                    let expected = if m.function.required_arity == m.function.arity
+                                    {
                                         format!("{}", m.function.arity)
                                     } else {
-                                        format!("{} to {}", m.function.required_arity, m.function.arity)
+                                        format!(
+                                            "{} to {}",
+                                            m.function.required_arity, m.function.arity
+                                        )
                                     };
                                     return Err(VmError::TypeError {
                                         message: format!(
@@ -3036,7 +3109,8 @@ impl Vm {
                                 self.push_param_defaults(&m.function, arg_count);
                                 check_param_types(
                                     &m.function,
-                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                    &mut self.stack
+                                        [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                     line,
                                 )?;
                                 // recv and args are already on the stack at recv_slot..
@@ -3173,12 +3247,18 @@ impl Vm {
                                 });
                             }
                         }
-                        if arg_count < method.function.required_arity || arg_count > method.function.arity {
-                            let expected = if method.function.required_arity == method.function.arity {
-                                format!("{}", method.function.arity)
-                            } else {
-                                format!("{} to {}", method.function.required_arity, method.function.arity)
-                            };
+                        if arg_count < method.function.required_arity
+                            || arg_count > method.function.arity
+                        {
+                            let expected =
+                                if method.function.required_arity == method.function.arity {
+                                    format!("{}", method.function.arity)
+                                } else {
+                                    format!(
+                                        "{} to {}",
+                                        method.function.required_arity, method.function.arity
+                                    )
+                                };
                             return Err(VmError::TypeError {
                                 message: format!(
                                     "method '{}' expects {} arg(s), got {}",
@@ -3313,11 +3393,16 @@ impl Vm {
                             });
                         }
                     };
-                    if arg_count < method.function.required_arity || arg_count > method.function.arity {
+                    if arg_count < method.function.required_arity
+                        || arg_count > method.function.arity
+                    {
                         let expected = if method.function.required_arity == method.function.arity {
                             format!("{}", method.function.arity)
                         } else {
-                            format!("{} to {}", method.function.required_arity, method.function.arity)
+                            format!(
+                                "{} to {}",
+                                method.function.required_arity, method.function.arity
+                            )
                         };
                         return Err(VmError::TypeError {
                             message: format!(
@@ -3556,7 +3641,8 @@ impl Vm {
                                     });
                                 }
                             }
-                            if arg_count < m.function.required_arity || arg_count > m.function.arity {
+                            if arg_count < m.function.required_arity || arg_count > m.function.arity
+                            {
                                 let expected = if m.function.required_arity == m.function.arity {
                                     format!("{}", m.function.arity)
                                 } else {
@@ -3596,11 +3682,17 @@ impl Vm {
                             .and_then(|entry| entry.methods.get(&method_name).cloned());
                         match method {
                             Some(m) => {
-                                if arg_count < m.function.required_arity || arg_count > m.function.arity {
-                                    let expected = if m.function.required_arity == m.function.arity {
+                                if arg_count < m.function.required_arity
+                                    || arg_count > m.function.arity
+                                {
+                                    let expected = if m.function.required_arity == m.function.arity
+                                    {
                                         format!("{}", m.function.arity)
                                     } else {
-                                        format!("{} to {}", m.function.required_arity, m.function.arity)
+                                        format!(
+                                            "{} to {}",
+                                            m.function.required_arity, m.function.arity
+                                        )
                                     };
                                     return Err(VmError::TypeError {
                                         message: format!(
@@ -3613,7 +3705,8 @@ impl Vm {
                                 self.push_param_defaults(&m.function, arg_count);
                                 check_param_types(
                                     &m.function,
-                                    &mut self.stack[recv_slot + 1..recv_slot + 1 + m.function.arity],
+                                    &mut self.stack
+                                        [recv_slot + 1..recv_slot + 1 + m.function.arity],
                                     line,
                                 )?;
                                 let class_name = Some(m.defined_in.clone());
@@ -3670,11 +3763,16 @@ impl Vm {
                             });
                         }
                     }
-                    if arg_count < method.function.required_arity || arg_count > method.function.arity {
+                    if arg_count < method.function.required_arity
+                        || arg_count > method.function.arity
+                    {
                         let expected = if method.function.required_arity == method.function.arity {
                             format!("{}", method.function.arity)
                         } else {
-                            format!("{} to {}", method.function.required_arity, method.function.arity)
+                            format!(
+                                "{} to {}",
+                                method.function.required_arity, method.function.arity
+                            )
                         };
                         return Err(VmError::TypeError {
                             message: format!(
@@ -3839,7 +3937,6 @@ impl Vm {
                     let matches = self.rescue_type_matches(&val, &expected);
                     self.stack.push(VmValue::Bool(matches));
                 }
-
 
                 OpCode::GetGlobal(idx) => {
                     let name = match &self.frames.last().unwrap().function.chunk.constants[idx] {

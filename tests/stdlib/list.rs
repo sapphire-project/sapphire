@@ -213,4 +213,3 @@ fn chain_multiline_map_then_select() {
     let src = "[1, 2, 3, 4]\n  .map() { |x| x * 2 }\n  .select() { |x| x > 4 }\n  .size()";
     assert_eq!(eval(src), VmValue::Int(2));
 }
-

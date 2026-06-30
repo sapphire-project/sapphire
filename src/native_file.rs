@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_class_method, HeapObject, NativeArity, VmError, VmValue};
+use crate::vm::{HeapObject, NativeArity, VmError, VmValue, define_native_class_method};
 use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
@@ -194,7 +194,7 @@ fn file_write(
                     return Err(VmError::TypeError {
                         message: "File.write: content must be a string".to_string(),
                         line,
-                    })
+                    });
                 }
             };
             std::fs::write(path, content)

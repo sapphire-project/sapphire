@@ -47,9 +47,7 @@ fn read_line_strips_crlf() {
             stream.write_all(b"HTTP/1.0 200 OK\r\n").ok();
         },
         |port| {
-            let src = format!(
-                r#"Socket.connect("127.0.0.1", {port}).read_line()"#
-            );
+            let src = format!(r#"Socket.connect("127.0.0.1", {port}).read_line()"#);
             assert_eq!(eval(&src), VmValue::Str("HTTP/1.0 200 OK".to_string()));
         },
     );

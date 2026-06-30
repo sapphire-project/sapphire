@@ -14,7 +14,11 @@ pub fn socket_connect(host: &str, port: i64, _line: u32) -> Result<BufReader<Tcp
         .map_err(|e| raise(format!("Socket.connect: {}", e)))
 }
 
-pub fn socket_write(reader: &mut BufReader<TcpStream>, data: &str, _line: u32) -> Result<(), VmError> {
+pub fn socket_write(
+    reader: &mut BufReader<TcpStream>,
+    data: &str,
+    _line: u32,
+) -> Result<(), VmError> {
     reader
         .get_mut()
         .write_all(data.as_bytes())
@@ -35,7 +39,11 @@ pub fn socket_read_line(reader: &mut BufReader<TcpStream>, _line: u32) -> Result
     Ok(buf)
 }
 
-pub fn socket_read_bytes(reader: &mut BufReader<TcpStream>, n: i64, _line: u32) -> Result<String, VmError> {
+pub fn socket_read_bytes(
+    reader: &mut BufReader<TcpStream>,
+    n: i64,
+    _line: u32,
+) -> Result<String, VmError> {
     let n = n.max(0) as usize;
     let mut buf = vec![0u8; n];
     reader

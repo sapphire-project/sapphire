@@ -705,7 +705,6 @@ fn or_returns_rhs_when_falsy() {
     assert_eq!(eval("nil || nil"), VmValue::Nil);
 }
 
-
 #[test]
 fn implicit_return_last_def_returns_method_name() {
     assert_eq!(
@@ -734,7 +733,6 @@ f = outer(42)()
 f()";
     assert_eq!(eval(src), VmValue::Int(42));
 }
-
 
 #[test]
 fn lambda_basic_call() {
@@ -1012,7 +1010,6 @@ fn while_condition_method_call_no_block_greed() {
     let src = "list = [1, 2, 3]\ni = 0\nsum = 0\nlen = list.size()\nwhile i < len { sum = sum + list[i]\ni = i + 1 }\nsum";
     assert_eq!(eval(src), VmValue::Int(6));
 }
-
 
 // ---- Yield ----
 
@@ -1624,7 +1621,6 @@ Box.new().size()"#;
 
 // ── Union type syntax ─────────────────────────────────────────────────────────
 
-
 #[test]
 fn union_return_type_accepts_either_arm() {
     // Int | String return type: both arms should be accepted at runtime
@@ -1783,8 +1779,7 @@ fn generic_class_runs() {
 
 #[test]
 fn generic_class_string_value_runs() {
-    let result =
-        eval_stdlib("class Box[T] { attr value: T }\nb = Box.new(value: \"hi\")\nb.value");
+    let result = eval_stdlib("class Box[T] { attr value: T }\nb = Box.new(value: \"hi\")\nb.value");
     assert_eq!(result, VmValue::Str("hi".into()));
 }
 

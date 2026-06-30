@@ -4,11 +4,9 @@ use std::collections::HashMap;
 pub fn build_regex(pattern: &str, ignore_case: bool, line: u32) -> Result<regex::Regex, VmError> {
     let mut builder = regex::RegexBuilder::new(pattern);
     builder.case_insensitive(ignore_case);
-    builder.build().map_err(|e| {
-        VmError::TypeError {
-            message: format!("Invalid regex pattern: {}", e),
-            line,
-        }
+    builder.build().map_err(|e| VmError::TypeError {
+        message: format!("Invalid regex pattern: {}", e),
+        line,
     })
 }
 

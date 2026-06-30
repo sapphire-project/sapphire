@@ -1,5 +1,5 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_class_method};
 use VmValue::Str;
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {

@@ -1,6 +1,6 @@
 use crate::gc::{GcHeap, GcRef};
 use crate::native::vm_value_partial_cmp;
-use crate::vm::{define_native_method, format_value_with_heap, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_method, format_value_with_heap};
 
 fn map_r(recv: &VmValue) -> GcRef {
     match recv {
@@ -17,7 +17,10 @@ pub fn map_delete(
 ) -> Result<VmValue, VmError> {
     let r = map_r(recv);
     match &args[0] {
-        VmValue::Str(k) => Ok(heap.get_map_mut(r).remove(k.as_str()).unwrap_or(VmValue::Nil)),
+        VmValue::Str(k) => Ok(heap
+            .get_map_mut(r)
+            .remove(k.as_str())
+            .unwrap_or(VmValue::Nil)),
         _ => Err(VmError::TypeError {
             message: "delete expects a String key".to_string(),
             line,
@@ -43,7 +46,11 @@ pub fn map_get(
 ) -> Result<VmValue, VmError> {
     let r = map_r(recv);
     match &args[0] {
-        VmValue::Str(k) => Ok(heap.get_map(r).get(k.as_str()).cloned().unwrap_or(VmValue::Nil)),
+        VmValue::Str(k) => Ok(heap
+            .get_map(r)
+            .get(k.as_str())
+            .cloned()
+            .unwrap_or(VmValue::Nil)),
         _ => Err(VmError::TypeError {
             message: "get expects a String key".to_string(),
             line,

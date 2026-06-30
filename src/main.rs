@@ -82,7 +82,13 @@ fn run_file(path: &str) {
     let func = match compiler::compile(&exprs) {
         Ok(f) => f,
         Err(e) => {
-            emit_error(&e.message, e.line as usize, e.column as usize, &source, path);
+            emit_error(
+                &e.message,
+                e.line as usize,
+                e.column as usize,
+                &source,
+                path,
+            );
             std::process::exit(1);
         }
     };
@@ -129,7 +135,11 @@ fn typecheck_file(path: &str) {
 
 fn display_parse_error(e: &sapphire::error::SapphireError, source: &str, path: &str) {
     match e {
-        sapphire::error::SapphireError::ParseError { message, line, column } => {
+        sapphire::error::SapphireError::ParseError {
+            message,
+            line,
+            column,
+        } => {
             emit_error(message, *line, *column, source, path);
         }
         other => eprintln!("{}", other),
@@ -222,7 +232,13 @@ fn run_tests(path: &str) {
         let func = match compiler::compile(&exprs) {
             Ok(f) => f,
             Err(e) => {
-                emit_error(&e.message, e.line as usize, e.column as usize, &source, &file_path_str);
+                emit_error(
+                    &e.message,
+                    e.line as usize,
+                    e.column as usize,
+                    &source,
+                    &file_path_str,
+                );
                 std::process::exit(1);
             }
         };
@@ -369,7 +385,13 @@ fn run_repl() {
         }
         let func = match compiler::compile_repl(&exprs) {
             Err(e) => {
-                emit_error(&e.message, e.line as usize, e.column as usize, trimmed, "<repl>");
+                emit_error(
+                    &e.message,
+                    e.line as usize,
+                    e.column as usize,
+                    trimmed,
+                    "<repl>",
+                );
                 continue;
             }
             Ok(f) => f,
@@ -388,7 +410,7 @@ fn generate_doc(path: &str) {
         eprintln!("No sapphire files found in '{}'", path);
         std::process::exit(1);
     }
-    
+
     let mut docs = std::collections::BTreeMap::new();
     for file_path in &files {
         let source = match std::fs::read_to_string(file_path) {
@@ -406,12 +428,12 @@ fn generate_doc(path: &str) {
                 std::process::exit(1);
             }
         };
-        
+
         let file_doc = sapphire::doc::extract_file_doc(&exprs);
         let path_str = file_path.to_string_lossy().into_owned();
         docs.insert(path_str, file_doc);
     }
-    
+
     match serde_json::to_string_pretty(&docs) {
         Ok(json_str) => println!("{}", json_str),
         Err(e) => {
@@ -445,4 +467,3 @@ fn collect_doc_files_recursive(dir: &std::path::Path, out: &mut Vec<std::path::P
         }
     }
 }
-

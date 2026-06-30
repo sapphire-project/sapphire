@@ -28,5 +28,8 @@ fn puts_coerces_nil_value() {
 
 #[test]
 fn gets_wrong_arity_is_type_error() {
-    assert!(matches!(eval_err(r#"IO.gets("extra")"#), VmError::TypeError { .. }));
+    assert!(matches!(
+        eval_err(r#"IO.gets("extra")"#),
+        VmError::TypeError { .. }
+    ));
 }

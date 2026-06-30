@@ -1,15 +1,17 @@
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_class_method};
 
 fn math_arg(args: &[VmValue], method: &str, line: u32) -> Result<f64, VmError> {
     match args {
         [VmValue::Float(f)] => Ok(*f),
-        [VmValue::Int(i)]   => Ok(*i as f64),
+        [VmValue::Int(i)] => Ok(*i as f64),
         [_] => Err(VmError::TypeError {
-            message: format!("Math.{method}: argument must be numeric"), line,
+            message: format!("Math.{method}: argument must be numeric"),
+            line,
         }),
         _ => Err(VmError::TypeError {
-            message: format!("Math.{method} expects 1 argument, got {}", args.len()), line,
+            message: format!("Math.{method} expects 1 argument, got {}", args.len()),
+            line,
         }),
     }
 }
@@ -51,8 +53,8 @@ fn math_atan(
 }
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
-    define_native_class_method(heap, class_ref, "sin",  1, math_sin);
-    define_native_class_method(heap, class_ref, "cos",  1, math_cos);
+    define_native_class_method(heap, class_ref, "sin", 1, math_sin);
+    define_native_class_method(heap, class_ref, "cos", 1, math_cos);
     define_native_class_method(heap, class_ref, "asin", 1, math_asin);
     define_native_class_method(heap, class_ref, "atan", 1, math_atan);
 }

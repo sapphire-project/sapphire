@@ -183,7 +183,10 @@ impl Lexer {
                 c if c.is_ascii_digit() => self.number(c),
                 c if c.is_ascii_alphabetic() || c == '_' => self.identifier(c),
                 '@' => {
-                    if self.is_at_end() || (!self.source[self.current].is_ascii_alphabetic() && self.source[self.current] != '_') {
+                    if self.is_at_end()
+                        || (!self.source[self.current].is_ascii_alphabetic()
+                            && self.source[self.current] != '_')
+                    {
                         continue;
                     }
                     let first = self.advance();

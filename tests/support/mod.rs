@@ -103,7 +103,9 @@ pub fn eval_stdlib_err(src: &str) -> VmError {
 
 pub fn parse_err(src: &str) -> SapphireError {
     let tokens = Lexer::new(src).scan_tokens();
-    Parser::new(tokens).parse().expect_err("expected parse error")
+    Parser::new(tokens)
+        .parse()
+        .expect_err("expected parse error")
 }
 
 pub fn parse_err_msg(src: &str) -> String {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::gc::{GcHeap, GcRef};
-use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_class_method};
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
     define_native_class_method(heap, class_ref, "parse", 1, json_parse);
@@ -29,9 +29,8 @@ fn json_parse(
         }
     };
 
-    let parsed: serde_json::Value = serde_json::from_str(input).map_err(|e| {
-        VmError::Raised(VmValue::Str(format!("invalid JSON: {e}")))
-    })?;
+    let parsed: serde_json::Value = serde_json::from_str(input)
+        .map_err(|e| VmError::Raised(VmValue::Str(format!("invalid JSON: {e}"))))?;
 
     Ok(json_to_vm(heap, parsed))
 }

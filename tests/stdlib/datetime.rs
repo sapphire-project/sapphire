@@ -5,12 +5,18 @@ use super::{eval_bool, eval_int, eval_str};
 #[test]
 fn instant_of_epoch_seconds() {
     assert_eq!(eval_int("Instant.of_epoch_seconds(0).epoch_seconds()"), 0);
-    assert_eq!(eval_int("Instant.of_epoch_seconds(3600).epoch_seconds()"), 3600);
+    assert_eq!(
+        eval_int("Instant.of_epoch_seconds(3600).epoch_seconds()"),
+        3600
+    );
 }
 
 #[test]
 fn instant_of_epoch_millis() {
-    assert_eq!(eval_int("Instant.of_epoch_millis(5000).epoch_millis()"), 5000);
+    assert_eq!(
+        eval_int("Instant.of_epoch_millis(5000).epoch_millis()"),
+        5000
+    );
 }
 
 #[test]
@@ -73,9 +79,7 @@ fn instant_before_after() {
 
 #[test]
 fn instant_in_timezone() {
-    let s = eval_str(
-        r#"Instant.of_epoch_seconds(0).in_timezone("UTC").to_s()"#,
-    );
+    let s = eval_str(r#"Instant.of_epoch_seconds(0).in_timezone("UTC").to_s()"#);
     assert!(s.contains("1970"), "got: {}", s);
 }
 
@@ -164,15 +168,11 @@ fn date_sub_date_gives_duration() {
 #[test]
 fn date_before_after() {
     assert_eq!(
-        eval_bool(
-            "Date.of(2023, 1, 1).before?(Date.of(2024, 1, 1))"
-        ),
+        eval_bool("Date.of(2023, 1, 1).before?(Date.of(2024, 1, 1))"),
         true
     );
     assert_eq!(
-        eval_bool(
-            "Date.of(2024, 1, 1).after?(Date.of(2023, 1, 1))"
-        ),
+        eval_bool("Date.of(2024, 1, 1).after?(Date.of(2023, 1, 1))"),
         true
     );
 }
@@ -297,25 +297,20 @@ fn zoned_spring_forward_gap_raises() {
 #[test]
 fn zoned_fall_back_before() {
     // 2024-11-03 01:30 in fold → of_before → EDT (-04)
-    let s = eval_str(
-        r#"ZonedDateTime.of_before(2024, 11, 3, 1, 30, 0, "America/New_York").to_s()"#,
-    );
+    let s =
+        eval_str(r#"ZonedDateTime.of_before(2024, 11, 3, 1, 30, 0, "America/New_York").to_s()"#);
     assert!(s.contains("-04:00"), "expected EDT offset, got: {}", s);
 }
 
 #[test]
 fn zoned_fall_back_after() {
     // 2024-11-03 01:30 in fold → of_after → EST (-05)
-    let s = eval_str(
-        r#"ZonedDateTime.of_after(2024, 11, 3, 1, 30, 0, "America/New_York").to_s()"#,
-    );
+    let s = eval_str(r#"ZonedDateTime.of_after(2024, 11, 3, 1, 30, 0, "America/New_York").to_s()"#);
     assert!(s.contains("-05:00"), "expected EST offset, got: {}", s);
 }
 
 #[test]
 fn zoned_with_timezone() {
-    let s = eval_str(
-        r#"ZonedDateTime.now("UTC").with_timezone("America/Chicago").timezone()"#,
-    );
+    let s = eval_str(r#"ZonedDateTime.now("UTC").with_timezone("America/Chicago").timezone()"#);
     assert_eq!(s, "America/Chicago");
 }

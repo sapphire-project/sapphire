@@ -2,7 +2,7 @@ use std::io::BufRead;
 
 use crate::gc::{GcHeap, GcRef};
 use crate::output;
-use crate::vm::{define_native_class_method, HeapObject, VmError, VmValue};
+use crate::vm::{HeapObject, VmError, VmValue, define_native_class_method};
 
 pub fn register_class_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
     define_native_class_method(heap, class_ref, "puts", 1, io_puts);
@@ -64,6 +64,8 @@ fn io_gets(
             }
             Ok(VmValue::Str(buf))
         }
-        Err(e) => Err(VmError::Raised(VmValue::Str(format!("IO.gets failed: {e}")))),
+        Err(e) => Err(VmError::Raised(VmValue::Str(format!(
+            "IO.gets failed: {e}"
+        )))),
     }
 }

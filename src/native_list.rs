@@ -1,7 +1,7 @@
 use crate::gc::{GcHeap, GcRef};
 use crate::native::vm_value_partial_cmp;
 use crate::vm::{
-    define_native_method, format_value_with_heap, HeapObject, NativeArity, VmError, VmValue,
+    HeapObject, NativeArity, VmError, VmValue, define_native_method, format_value_with_heap,
 };
 
 fn list_r(recv: &VmValue) -> GcRef {
@@ -136,7 +136,7 @@ pub fn list_join(
             return Err(VmError::TypeError {
                 message: "join expects a String".to_string(),
                 line,
-            })
+            });
         }
     };
     let s = heap
@@ -169,7 +169,10 @@ pub fn list_max(
     if v.is_empty() {
         return Ok(VmValue::Nil);
     }
-    Ok(v.iter().max_by(|a, b| vm_value_partial_cmp(a, b)).cloned().unwrap())
+    Ok(v.iter()
+        .max_by(|a, b| vm_value_partial_cmp(a, b))
+        .cloned()
+        .unwrap())
 }
 
 pub fn list_min(
@@ -183,7 +186,10 @@ pub fn list_min(
     if v.is_empty() {
         return Ok(VmValue::Nil);
     }
-    Ok(v.iter().min_by(|a, b| vm_value_partial_cmp(a, b)).cloned().unwrap())
+    Ok(v.iter()
+        .min_by(|a, b| vm_value_partial_cmp(a, b))
+        .cloned()
+        .unwrap())
 }
 
 pub fn list_pop(
@@ -259,7 +265,7 @@ pub fn list_sum(
                 return Err(VmError::TypeError {
                     message: "sum: non-numeric element".to_string(),
                     line,
-                })
+                });
             }
         };
     }
@@ -300,13 +306,7 @@ pub fn register_methods(heap: &mut GcHeap<HeapObject>, class_ref: GcRef) {
     define_native_method(heap, class_ref, "first", 0, list_first);
     define_native_method(heap, class_ref, "flatten", 0, list_flatten);
     define_native_method(heap, class_ref, "include?", 1, list_include_q);
-    define_native_method(
-        heap,
-        class_ref,
-        "join",
-        NativeArity::at_least(0),
-        list_join,
-    );
+    define_native_method(heap, class_ref, "join", NativeArity::at_least(0), list_join);
     define_native_method(heap, class_ref, "last", 0, list_last);
     define_native_method(heap, class_ref, "max", 0, list_max);
     define_native_method(heap, class_ref, "min", 0, list_min);

@@ -18,9 +18,15 @@ fn param_type_wrong_plain_function() {
     let err = eval_err("def greet(name: String) { name }\ngreet(42)");
     match err {
         VmError::TypeError { message, .. } => {
-            assert!(message.contains("argument 1"), "missing arg position: {message}");
+            assert!(
+                message.contains("argument 1"),
+                "missing arg position: {message}"
+            );
             assert!(message.contains("greet"), "missing fn name: {message}");
-            assert!(message.contains("String"), "missing expected type: {message}");
+            assert!(
+                message.contains("String"),
+                "missing expected type: {message}"
+            );
             assert!(message.contains("Int"), "missing actual type: {message}");
         }
         other => panic!("expected TypeError, got {other:?}"),
@@ -32,7 +38,10 @@ fn param_type_multiple_params_checks_each() {
     let err = eval_err("def add(a: Int, b: Int) { a + b }\nadd(1, \"two\")");
     match err {
         VmError::TypeError { message, .. } => {
-            assert!(message.contains("argument 2"), "should report second arg: {message}");
+            assert!(
+                message.contains("argument 2"),
+                "should report second arg: {message}"
+            );
         }
         other => panic!("expected TypeError, got {other:?}"),
     }
@@ -77,8 +86,14 @@ fn param_type_instance_method_wrong_type() {
     let err = eval_err(src);
     match err {
         VmError::TypeError { message, .. } => {
-            assert!(message.contains("argument 1"), "missing arg position: {message}");
-            assert!(message.contains("String"), "missing expected type: {message}");
+            assert!(
+                message.contains("argument 1"),
+                "missing arg position: {message}"
+            );
+            assert!(
+                message.contains("String"),
+                "missing expected type: {message}"
+            );
         }
         other => panic!("expected TypeError, got {other:?}"),
     }
@@ -106,10 +121,7 @@ fn param_type_nullable_accepts_nil() {
 
 #[test]
 fn param_type_int_promotes_to_float() {
-    assert_eq!(
-        eval("def foo(n: Float) { n }\nfoo(4)"),
-        VmValue::Float(4.0)
-    );
+    assert_eq!(eval("def foo(n: Float) { n }\nfoo(4)"), VmValue::Float(4.0));
 }
 
 #[test]

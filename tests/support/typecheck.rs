@@ -4,11 +4,7 @@ use super::parse_stmts;
 
 pub fn typecheck_ok(src: &str) {
     let errors = TypeChecker::check(&parse_stmts(src));
-    assert!(
-        errors.is_empty(),
-        "unexpected type errors: {:?}",
-        errors
-    );
+    assert!(errors.is_empty(), "unexpected type errors: {:?}", errors);
 }
 
 pub fn typecheck_err_msg(src: &str) -> String {
